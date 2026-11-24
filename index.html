@@ -1,0 +1,1762 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>Редактор помещений CUBICA</title>
+<script src="https://cdn.jsdelivr.net/npm/polygon-clipping@0.15.7/dist/polygon-clipping.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+:root{--red:#c00000;--red-l:#fdecec;--ink:#1a1a2e;--mut:#6b7280;--line:#e3e6ea;--bg:#f3f4f6;--blue:#1565c0;--green:#2e7d32;--violet:#6a1b9a}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{font:13px/1.4 'Segoe UI',system-ui,-apple-system,Roboto,Arial,sans-serif;color:var(--ink);background:var(--bg);display:grid;grid-template-rows:52px 1fr 34px}
+button{font:inherit;cursor:pointer}
+input,select{font:inherit}
+/* header */
+.top{display:flex;align-items:center;gap:8px;padding:0 12px;background:#fff;border-bottom:1px solid var(--line);min-width:0}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.2px;white-space:nowrap;margin-right:6px}
+.brand .mk{width:28px;height:28px;border-radius:7px;background:var(--red);display:grid;place-items:center;color:#fff}
+.brand small{display:block;font-weight:500;color:var(--mut);font-size:11px;letter-spacing:0}
+.tb{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 11px;border:1px solid var(--line);background:#fff;border-radius:8px;color:var(--ink);white-space:nowrap}
+.tb:hover{border-color:#c9ced6;background:#fafafa}
+.tb:disabled{opacity:.45;cursor:default}
+.tb svg{width:16px;height:16px;flex:0 0 auto}
+.tb.pr{background:var(--red);border-color:var(--red);color:#fff;font-weight:700}
+.tb.pr:hover{background:#a50000}
+.tb.ic{width:34px;padding:0;justify-content:center}
+.sep{width:1px;height:24px;background:var(--line);margin:0 2px}
+.sp{flex:1}
+.embed-only{display:none}
+body.embed .embed-only{display:inline-flex}
+/* main */
+.main{display:grid;grid-template-columns:52px 1fr 330px;min-height:0}
+.tools{background:#fff;border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 0;overflow-y:auto}
+.tool{width:40px;height:40px;border-radius:9px;border:1px solid transparent;background:transparent;display:grid;place-items:center;color:#374151;position:relative}
+.tool svg{width:20px;height:20px}
+.tool:hover{background:#f3f4f6}
+.tool.on{background:var(--red-l);border-color:#f3c2c2;color:var(--red)}
+.tool .k{position:absolute;right:3px;bottom:1px;font-size:9px;color:#9aa1ab;font-weight:700}
+.tools hr{width:28px;border:none;border-top:1px solid var(--line);margin:4px 0}
+.stage{position:relative;overflow:hidden;background:#fff;min-width:0;touch-action:none}
+#svg{position:absolute;inset:0;width:100%;height:100%;display:block;user-select:none;-webkit-user-select:none}
+.opts{position:absolute;left:10px;top:10px;display:flex;gap:6px;flex-wrap:wrap;z-index:5;pointer-events:none}
+.opts>*{pointer-events:auto}
+.chip{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.95);border:1px solid var(--line);border-radius:8px;padding:5px 9px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fff}
+.seg button{border:none;background:#fff;padding:5px 10px;border-right:1px solid var(--line);color:#374151}
+.seg button:last-child{border-right:none}
+.seg button.on{background:var(--ink);color:#fff}
+.hint{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);background:rgba(26,26,46,.88);color:#fff;padding:7px 14px;border-radius:8px;font-size:12.5px;max-width:min(760px,92%);text-align:center;pointer-events:none;z-index:5}
+.hint b{color:#ffd3d3}
+.hud{position:absolute;z-index:6;display:none;background:#fff;border:1.5px solid var(--red);border-radius:8px;padding:4px 6px;box-shadow:0 4px 14px rgba(0,0,0,.12);align-items:center;gap:6px}
+.hud input{width:130px;border:none;outline:none;font-weight:700;font-size:14px;color:var(--red)}
+.hud span{font-size:11px;color:var(--mut)}
+.ctx{position:absolute;z-index:20;display:none;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.14);padding:5px;min-width:210px}
+.ctx button{display:flex;width:100%;text-align:left;border:none;background:none;padding:7px 10px;border-radius:6px;gap:8px;align-items:center}
+.ctx button:hover{background:#f3f4f6}
+.ctx .dg{color:var(--red)}
+.ctx hr{border:none;border-top:1px solid var(--line);margin:4px 0}
+.toast{position:absolute;right:12px;top:12px;z-index:30;background:var(--ink);color:#fff;padding:9px 14px;border-radius:8px;opacity:0;transform:translateY(-6px);transition:.25s;pointer-events:none;max-width:360px}
+.toast.show{opacity:1;transform:none}
+.toast.err{background:var(--red)}
+.busy{position:absolute;inset:0;background:rgba(255,255,255,.6);display:none;place-items:center;z-index:25;font-weight:700}
+/* side */
+.side{background:#fff;border-left:1px solid var(--line);overflow-y:auto;min-height:0}
+.sec{border-bottom:1px solid var(--line);padding:12px 14px}
+.sec h3{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--mut);margin-bottom:8px;display:flex;align-items:center;justify-content:space-between}
+.sec h3 .cnt{background:#f3f4f6;color:#374151;border-radius:10px;padding:0 7px;font-size:11px}
+.rooms{list-style:none;display:flex;flex-direction:column;gap:4px}
+.rooms li{display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;cursor:pointer}
+.rooms li:hover{border-color:#c9ced6}
+.rooms li.on{border-color:var(--red);background:var(--red-l)}
+.rooms li.multi{border-color:var(--blue);background:#eef4fc}
+.rooms .dot{width:10px;height:10px;border-radius:3px;flex:0 0 auto}
+.rooms .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+.rooms .ar{color:var(--mut);font-variant-numeric:tabular-nums;white-space:nowrap}
+.rooms .x{border:none;background:none;color:#9aa1ab;width:22px;height:22px;border-radius:5px}
+.rooms .x:hover{background:#fff;color:var(--red)}
+.empty{color:var(--mut);font-size:12.5px;padding:6px 0}
+.btns{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.btns .tb{height:30px;padding:0 9px;font-size:12.5px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;margin:6px 0 8px}
+.kv span{color:var(--mut)}
+.kv b{text-align:right;font-variant-numeric:tabular-nums}
+.fld{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.fld label{color:var(--mut);min-width:78px}
+.fld input[type=text],.fld input[type=number],.fld select{flex:1;min-width:0;height:30px;border:1px solid var(--line);border-radius:7px;padding:0 8px;background:#fff}
+.fld input:focus,.fld select:focus{outline:none;border-color:var(--red)}
+.fld input[type=range]{flex:1;accent-color:var(--red)}
+.fld .v{min-width:46px;text-align:right;font-variant-numeric:tabular-nums}
+table.walls{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+table.walls th{font-size:11px;color:var(--mut);font-weight:600;text-align:left;padding:3px 4px;border-bottom:1px solid var(--line)}
+table.walls td{padding:2px 4px;border-bottom:1px solid #f1f2f4}
+table.walls tr.hl td{background:#fff6e5}
+table.walls input{width:100%;height:26px;border:1px solid transparent;border-radius:5px;padding:0 5px;text-align:right;background:#f7f8fa}
+table.walls input:hover{border-color:var(--line)}
+table.walls input:focus{outline:none;border-color:var(--red);background:#fff}
+table.walls td.n{color:var(--mut);width:22px}
+.note{font-size:12px;color:var(--mut);margin-top:6px}
+.warn{font-size:12px;color:#b45309;background:#fff7e6;border:1px solid #fde2b3;border-radius:7px;padding:6px 8px;margin-top:8px}
+.vbox{background:#f7f8fa;border:1px solid var(--line);border-radius:8px;padding:8px;margin-top:8px}
+.vbox .row{display:flex;gap:6px;align-items:center;margin-top:6px}
+.vbox .row input{width:80px;height:28px;border:1px solid var(--line);border-radius:6px;padding:0 6px;text-align:right}
+.chk{display:flex;align-items:center;gap:7px;margin:6px 0;cursor:pointer}
+.chk input{accent-color:var(--red)}
+/* status */
+.status{display:flex;align-items:center;gap:10px;padding:0 12px;background:#fff;border-top:1px solid var(--line);font-size:12px;color:#374151;white-space:nowrap;overflow-x:auto}
+.status .tg{border:1px solid var(--line);background:#fff;border-radius:6px;padding:2px 8px;color:var(--mut)}
+.status .tg.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.status select{height:24px;border:1px solid var(--line);border-radius:6px;background:#fff}
+.status .xy{font-variant-numeric:tabular-nums;min-width:150px;color:var(--mut)}
+/* modal */
+.modal{position:fixed;inset:0;background:rgba(17,17,30,.45);display:none;align-items:center;justify-content:center;z-index:100;padding:16px}
+.modal.open{display:flex}
+.mbox{background:#fff;border-radius:14px;max-width:640px;width:100%;max-height:92vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.mbox .mh{padding:16px 18px 6px;font-size:16px;font-weight:800}
+.mbox .mb{padding:6px 18px 12px}
+.mbox .mf{padding:12px 18px 16px;display:flex;gap:8px;justify-content:flex-end;border-top:1px solid var(--line)}
+.tpl-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+.tpl{border:1.5px solid var(--line);border-radius:10px;background:#fff;padding:8px 4px 6px;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12px}
+.tpl svg{width:58px;height:42px}
+.tpl.on{border-color:var(--red);background:var(--red-l)}
+.tpl-params{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tpl-params .fld label{min-width:auto}
+.ms-rows{display:flex;flex-direction:column;gap:5px;max-height:44vh;overflow:auto;padding-right:4px}
+.ms-row{display:grid;grid-template-columns:26px 1fr 140px 64px 26px;gap:6px;align-items:center}
+.ms-row input,.ms-row select{height:30px;border:1px solid var(--line);border-radius:6px;padding:0 6px}
+.ms-row .n{color:var(--mut);text-align:right}
+.ms-row button{border:none;background:none;color:#9aa1ab}
+.ms-res{margin-top:10px;padding:8px 10px;border-radius:8px;background:#f7f8fa;border:1px solid var(--line)}
+.ms-res.bad{background:#fff7e6;border-color:#fde2b3}
+.ms-res.ok{background:#edf7ee;border-color:#cfe8d1}
+.side-toggle{display:none}
+@media (max-width:900px){
+  .main{grid-template-columns:48px 1fr}
+  .side{position:fixed;right:0;top:52px;bottom:34px;width:min(340px,92vw);z-index:40;transform:translateX(105%);transition:transform .25s;box-shadow:-10px 0 30px rgba(0,0,0,.15)}
+  body.side-open .side{transform:none}
+  .side-toggle{display:inline-flex}
+  .brand small,.hide-m{display:none}
+  .tool{width:38px;height:38px}
+  .tpl-grid{grid-template-columns:repeat(3,1fr)}
+}
+@media (max-width:560px){
+  .top .tb .lbl{display:none}
+  .top{gap:4px;padding:0 6px}
+  .top .tb{padding:0 7px}
+  .brand{margin-right:2px}.brand>div:last-child,.top .sep,#bPng,#bOpen,#bApplyAll{display:none}
+  .status #xy{display:none}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <div class="mk"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M4 5h11v6h5v8H4z"/></svg></div>
+    <div>Редактор помещений<small>CUBICA · общий для всех калькуляторов</small></div>
+  </div>
+  <button class="tb" id="bNew" title="Новый план"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/></svg><span class="lbl hide-m">Новый</span></button>
+  <button class="tb" id="bOpen" title="Открыть план (.json)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h6l2 2h10v10H3z"/></svg><span class="lbl hide-m">Открыть</span></button>
+  <button class="tb" id="bSave" title="Сохранить план в файл (Ctrl+S)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3h12l2 2v16H5z"/><path d="M8 3v6h8V3M8 21v-7h8v7"/></svg><span class="lbl hide-m">Сохранить</span></button>
+  <button class="tb" id="bPng" title="Скачать чертёж картинкой PNG"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 16l5-5 4 4 3-3 6 6"/></svg><span class="lbl hide-m">PNG</span></button>
+  <button class="tb" id="bPlan" title="Загрузить план/проект (картинка или PDF) подложкой"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v4h16v-4"/></svg><span class="lbl">Загрузить проект</span></button>
+  <div class="sep"></div>
+  <button class="tb ic" id="bUndo" title="Отменить (Ctrl+Z)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 010 12h-3"/></svg></button>
+  <button class="tb ic" id="bRedo" title="Повторить (Ctrl+Y)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 000 12h3"/></svg></button>
+  <button class="tb ic" id="bFit" title="Показать всё (Home)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+  <div class="sp"></div>
+  <button class="tb embed-only" id="bCancel">Отмена</button>
+  <button class="tb embed-only" id="bApplyAll" title="Передать в калькулятор все помещения плана">Передать все</button>
+  <button class="tb pr embed-only" id="bApply">Применить</button>
+  <button class="tb ic side-toggle" id="bSide" title="Панель"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+</header>
+
+<div class="main">
+  <nav class="tools" id="tools">
+    <button class="tool on" data-tool="select" title="Выбор и правка: тяните точки, стены, середины стен (V)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M5 3l14 8-6 2-2 6z"/></svg><span class="k">V</span></button>
+    <button class="tool" data-tool="walls" title="Стены: кликайте по углам или вводите длины с клавиатуры (W)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 20V8h8V4h8v16z"/><circle cx="4" cy="20" r="1.6" fill="currentColor"/><circle cx="4" cy="8" r="1.6" fill="currentColor"/><circle cx="12" cy="8" r="1.6" fill="currentColor"/></svg><span class="k">W</span></button>
+    <button class="tool" data-tool="rect" title="Прямоугольник: протяните мышью или введите 4500x3200 (R)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="6" width="16" height="12" rx="1"/></svg><span class="k">R</span></button>
+    <button class="tool" data-tool="arc" title="Дуга: потяните любую стену, чтобы сделать её радиусной (A)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 18C4 9 9 5 20 5"/><circle cx="4" cy="18" r="1.6" fill="currentColor"/><circle cx="20" cy="5" r="1.6" fill="currentColor"/></svg><span class="k">A</span></button>
+    <button class="tool" data-tool="knife" title="Разрезать на зоны: проведите линию через помещение (K)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="5" width="16" height="14" rx="1"/><path d="M14 2v20" stroke-dasharray="3 2"/></svg><span class="k">K</span></button>
+    <button class="tool" data-tool="measure" title="Рулетка: измерить расстояние (M)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17L17 3l4 4L7 21z"/><path d="M7 13l2 2M10 10l2 2M13 7l2 2"/></svg><span class="k">M</span></button>
+    <hr>
+    <button class="tool" data-tool="wand" title="Волшебная палочка: клик внутри комнаты на загруженном плане (F)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20L15 9"/><path d="M15 3v3M18.5 5.5l-2 2M21 9h-3M18.5 12.5l-2-2"/></svg><span class="k">F</span></button>
+    <button class="tool" data-tool="calib" title="Масштаб плана: укажите две точки известного размера"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 8v8M21 8v8"/><path d="M8 12V9M12 12V8M16 12V9"/></svg></button>
+    <button class="tool" data-tool="pan" title="Рука: двигать вид (H, или зажмите пробел)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M8 12V5.5a1.5 1.5 0 013 0V11V4.5a1.5 1.5 0 013 0V11V6a1.5 1.5 0 013 0v8a7 7 0 01-7 7h-1a6 6 0 01-5-3l-2.6-4.4a1.5 1.5 0 012.5-1.6L8 14"/></svg><span class="k">H</span></button>
+  </nav>
+
+  <div class="stage" id="stage">
+    <svg id="svg" xmlns="http://www.w3.org/2000/svg"></svg>
+    <div class="opts" id="opts">
+      <div class="chip" id="kindChip"><span style="color:var(--mut)">Рисую:</span>
+        <div class="seg" id="kindSeg">
+          <button data-kind="room" class="on">Помещение</button>
+          <button data-kind="zone">Зона</button>
+          <button data-kind="cut">Колонна / вырез</button>
+        </div>
+      </div>
+    </div>
+    <div class="hud" id="hud"><input id="hudIn" autocomplete="off" spellcheck="false"><span id="hudTip">Enter</span></div>
+    <div class="ctx" id="ctx"></div>
+    <div class="hint" id="hint"></div>
+    <div class="toast" id="toast"></div>
+    <div class="busy" id="busy">Обработка плана…</div>
+  </div>
+
+  <aside class="side" id="side">
+    <div class="sec">
+      <h3>Помещения плана <span class="cnt" id="roomCnt">0</span></h3>
+      <ul class="rooms" id="rooms"></ul>
+      <div class="btns">
+        <button class="tb" id="bTpl">Шаблон</button>
+        <button class="tb" id="bMeas">По замерам</button>
+        <button class="tb" id="bUnion" title="Объединить выделенные (Shift+клик по помещениям)">Объединить</button>
+        <button class="tb" id="bSub" title="Из первого выделенного вычесть остальные">Вычесть</button>
+      </div>
+    </div>
+    <div class="sec" id="propSec"></div>
+    <div class="sec">
+      <h3>Проект / план подложкой</h3>
+      <div id="ulInfo" class="empty">Загрузите планировку картинкой (JPG, PNG) или PDF — её можно обвести или распознать помещения автоматически.</div>
+      <div id="ulCtl" style="display:none">
+        <div class="fld"><label>Прозрачность</label><input type="range" id="ulOp" min="10" max="100" value="60"><span class="v" id="ulOpV">60%</span></div>
+        <div class="fld"><label>Масштаб</label><b id="ulScale" style="flex:1"></b></div>
+        <div class="btns" style="margin-top:0">
+          <button class="tb" id="bCalib">Задать масштаб</button>
+          <button class="tb" id="bUlMove">Двигать план</button>
+          <button class="tb" id="bUlDel">Убрать</button>
+        </div>
+        <div class="vbox">
+          <b>Распознавание помещений</b>
+          <div class="fld" style="margin-top:6px"><label>Стены темнее</label><input type="range" id="wThr" min="60" max="235" value="170"><span class="v" id="wThrV">170</span></div>
+          <div class="fld"><label>Проёмы до</label><input type="range" id="wGap" min="0" max="2000" step="50" value="1000"><span class="v" id="wGapV">1000 мм</span></div>
+          <label class="chk"><input type="checkbox" id="wOrtho" checked> Выравнивать стены по 90°</label>
+          <div class="btns" style="margin-top:4px">
+            <button class="tb" id="bWand">Палочка: клик в комнату</button>
+            <button class="tb pr" id="bAuto">Найти все помещения</button>
+          </div>
+          <div class="note">Сначала задайте масштаб по известному размеру на плане. Двери закрываются автоматически, если проём меньше значения «Проёмы до».</div>
+        </div>
+      </div>
+    </div>
+    <div class="sec">
+      <h3>Подсказки</h3>
+      <div class="note" style="margin-top:0;line-height:1.55">
+        <b>Стены (W):</b> клик — угол; наберите <b>3500</b> и Enter — стена 3500 мм по направлению мыши; <b>3500&lt;45</b> — под углом 45°; Backspace — убрать последнюю точку; клик по первой точке или Enter — замкнуть.<br>
+        <b>Правка (V):</b> тяните точку, стену (параллельно, соседние стены тянутся за ней) или ромбик в середине — получится дуга. Двойной клик по стене — новая точка. Правый клик — меню (скругление, фаска, удалить).<br>
+        <b>Shift</b> — временно снять ортогональность. Колесо — масштаб, пробел или пустое место — двигать вид.
+      </div>
+    </div>
+  </aside>
+</div>
+
+<footer class="status">
+  <span class="xy" id="xy">x — · y —</span>
+  <button class="tg on" id="tOrtho" title="Только 0°/90° (F8). Shift — временно снять">Ортогонально</button>
+  <button class="tg on" id="tSnap" title="Привязка к углам и выравнивание по другим точкам">Привязка</button>
+  <button class="tg on" id="tGrid" title="Показывать сетку">Сетка</button>
+  <button class="tg" id="tAngles" title="Показывать все углы, включая 90°">Все углы</button>
+  <span>Шаг <select id="step"><option value="1">1 мм</option><option value="5">5 мм</option><option value="10" selected>10 мм</option><option value="50">50 мм</option><option value="100">100 мм</option></select></span>
+  <span class="sp"></span>
+  <span id="zoomV">100%</span>
+</footer>
+
+<input type="file" id="fPlan" accept="image/*,application/pdf" hidden>
+<input type="file" id="fJson" accept=".json,application/json" hidden>
+
+<div class="modal" id="mTpl"><div class="mbox">
+  <div class="mh">Шаблон помещения</div>
+  <div class="mb"><div class="tpl-grid" id="tplGrid"></div><div class="tpl-params" id="tplParams"></div></div>
+  <div class="mf"><button class="tb" data-close>Отмена</button><button class="tb pr" id="tplOk">Добавить</button></div>
+</div></div>
+
+<div class="modal" id="mMeas"><div class="mbox">
+  <div class="mh">Помещение по замерам рулеткой</div>
+  <div class="mb">
+    <div class="note" style="margin:0 0 10px">Идите вдоль стен по часовой стрелке. Для каждой стены укажите длину, куда поворачиваете после неё и на сколько градусов (обычно 90). Последнюю стену можно не вводить — она замкнётся сама. Enter — следующая стена.</div>
+    <div class="ms-rows" id="msRows"></div>
+    <div class="btns"><button class="tb" id="msAdd">+ Стена</button></div>
+    <div class="ms-res" id="msRes"></div>
+  </div>
+  <div class="mf"><button class="tb" data-close>Отмена</button><button class="tb pr" id="msOk">Построить</button></div>
+</div></div>
+
+<div class="modal" id="mAsk"><div class="mbox" style="max-width:420px">
+  <div class="mh" id="askT"></div>
+  <div class="mb"><div class="note" id="askN" style="margin:0 0 8px"></div><div class="fld"><input type="number" id="askIn" style="height:36px;font-size:15px"><span id="askU">мм</span></div></div>
+  <div class="mf"><button class="tb" data-close>Отмена</button><button class="tb pr" id="askOk">OK</button></div>
+</div></div>
+
+<script>
+'use strict';
+/* =====================================================================
+   РЕДАКТОР ПОМЕЩЕНИЙ CUBICA
+   Общий модуль для всех калькуляторов. Координаты — миллиметры, ось Y вниз
+   (как в калькуляторах). Контур помещения: массив точек {x,y,b}, где b — «выпуклость»
+   стены от этой точки к следующей (0 — прямая, ±tan(угол/4) — дуга, как в DXF).
+
+   СВЯЗЬ С КАЛЬКУЛЯТОРОМ (postMessage или параметр в адресе):
+   • открыть: window.open(EDITOR_URL + '#in=' + base64url(JSON.stringify({polygon:[[x,y],...], name:'Кухня', calc:'armstrong'})))
+     или в iframe и затем: frame.contentWindow.postMessage({target:'cubica-room-editor', type:'load', polygon, name}, '*')
+   • редактор отвечает калькулятору: {source:'cubica-room-editor', type:'ready'}
+     и по кнопке «Применить»: {source:'cubica-room-editor', type:'apply', room:{name, polygon, L, W, area_m2, perimeter_mm, holes, shape}, rooms:[...]}
+     по «Отмена»: {source:'cubica-room-editor', type:'cancel'}
+   polygon — уже «развёрнутый» контур (дуги разбиты на короткие отрезки), сдвинут к 0,0,
+   ровно в формате roomPolygon текущих калькуляторов.
+   ===================================================================== */
+
+const $ = id => document.getElementById(id);
+const svg = $('svg'), stage = $('stage');
+const LS_KEY = 'cubica_room_editor_v1';
+const KIND = {
+  room: {name:'Помещение', fill:'rgba(192,0,0,.06)', fillSel:'rgba(192,0,0,.12)', stroke:'#1a1a2e', dot:'#c00000'},
+  zone: {name:'Зона', fill:'rgba(106,27,154,.07)', fillSel:'rgba(106,27,154,.14)', stroke:'#6a1b9a', dot:'#6a1b9a'},
+  cut:  {name:'Колонна / вырез', fill:'url(#hatch)', fillSel:'url(#hatch)', stroke:'#7a7f87', dot:'#7a7f87'}
+};
+
+/* ---------------- состояние ---------------- */
+const S = {
+  shapes: [],            // {id,name,kind,pts:[{x,y,b}],hidden}
+  sel: null,             // id выбранной фигуры
+  multi: [],             // id для объединения/вычитания
+  selV: -1,              // выбранная точка
+  selE: -1,              // выбранная стена
+  tool: 'select',
+  drawKind: 'room',
+  view: {ox: 0, oy: 0, s: 0.08},
+  opt: {ortho: true, snap: true, grid: true, allAngles: false, step: 10},
+  ul: null,              // подложка {src,w,h,x,y,k,op}
+  draw: null,            // рисование стен {pts:[]}
+  rect: null, knife: null, meas: null, calib: null,
+  cursor: null, guides: [], snapMark: null,
+  drag: null, hover: null,
+  embed: false
+};
+let nextId = 1;
+const uid = () => 's' + (nextId++) + '_' + Math.random().toString(36).slice(2, 6);
+
+/* ---------------- геометрия ---------------- */
+const dist = (a, b) => Math.hypot(b.x - a.x, b.y - a.y);
+const R2 = v => Math.round(v * 100) / 100;
+function arcOf(a, b, bul) {
+  const c = dist(a, b);
+  if (!bul || Math.abs(bul) < 1e-6 || c < 1e-6) return null;
+  const mid = {x: (a.x + b.x) / 2, y: (a.y + b.y) / 2};
+  const d = {x: (b.x - a.x) / c, y: (b.y - a.y) / c}, n = {x: -d.y, y: d.x};
+  const s = bul * c / 2;
+  const R = (c * c / 4 + s * s) / (2 * Math.abs(s));
+  const M = {x: mid.x + n.x * s, y: mid.y + n.y * s};
+  const sg = Math.sign(s);
+  const C = {x: M.x - n.x * sg * R, y: M.y - n.y * sg * R};
+  const sweep = 4 * Math.atan(Math.abs(bul));
+  const ca = {x: a.x - C.x, y: a.y - C.y}, cm = {x: M.x - C.x, y: M.y - C.y};
+  const dir = Math.sign(ca.x * cm.y - ca.y * cm.x) || 1;
+  return {C, R, sweep, dir, M, len: R * sweep, chord: c, s, n};
+}
+function bulgeFromR(c, R, sign, major) {
+  if (R < c / 2) R = c / 2;
+  const h = Math.sqrt(Math.max(0, R * R - c * c / 4));
+  const s = major ? R + h : R - h;
+  return (sign || 1) * 2 * s / c;
+}
+function flattenEdge(a, b, bul, out, err) {
+  const A = arcOf(a, b, bul);
+  if (!A) { out.push([a.x, a.y]); return; }
+  err = err || 2;
+  let st = 2 * Math.acos(Math.max(-1, 1 - err / A.R));
+  if (!(st > 0)) st = 0.2;
+  st = Math.min(st, Math.PI / 24);
+  const n = Math.max(3, Math.ceil(A.sweep / st));
+  const a0 = Math.atan2(a.y - A.C.y, a.x - A.C.x);
+  for (let k = 0; k < n; k++) {
+    const t = a0 + A.dir * A.sweep * k / n;
+    out.push([A.C.x + A.R * Math.cos(t), A.C.y + A.R * Math.sin(t)]);
+  }
+}
+function flatten(sh, err) {
+  const out = [], P = sh.pts, n = P.length;
+  for (let i = 0; i < n; i++) flattenEdge(P[i], P[(i + 1) % n], P[i].b, out, err);
+  return out;
+}
+function signedArea(poly) { let s = 0; for (let i = 0, n = poly.length; i < n; i++) { const a = poly[i], b = poly[(i + 1) % n]; s += a[0] * b[1] - b[0] * a[1]; } return s / 2; }
+function edgeLen(sh, i) { const P = sh.pts, a = P[i], b = P[(i + 1) % P.length]; const A = arcOf(a, b, a.b); return A ? A.len : dist(a, b); }
+function perimeter(sh) { let s = 0; for (let i = 0; i < sh.pts.length; i++) s += edgeLen(sh, i); return s; }
+function bboxOf(poly) { let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (const p of poly) { if (p[0] < x0) x0 = p[0]; if (p[1] < y0) y0 = p[1]; if (p[0] > x1) x1 = p[0]; if (p[1] > y1) y1 = p[1]; } return {x0, y0, x1, y1, w: x1 - x0, h: y1 - y0}; }
+function pip(poly, x, y) { let ins = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const xi = poly[i][0], yi = poly[i][1], xj = poly[j][0], yj = poly[j][1]; if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) ins = !ins; } return ins; }
+function segDist(p, a, b) { const dx = b.x - a.x, dy = b.y - a.y, L = dx * dx + dy * dy; let t = L ? ((p.x - a.x) * dx + (p.y - a.y) * dy) / L : 0; t = Math.max(0, Math.min(1, t)); const q = {x: a.x + dx * t, y: a.y + dy * t}; return {d: dist(p, q), t, q}; }
+function shArea(sh) { // точная площадь с учётом дуг, мм²
+  const P = sh.pts, n = P.length; let t = 0;
+  for (let i = 0; i < n; i++) {
+    const a = P[i], b = P[(i + 1) % n]; t += (a.x * b.y - b.x * a.y) / 2;
+    if (a.b) { const c = Math.hypot(b.x - a.x, b.y - a.y), th = 4 * Math.atan(Math.abs(a.b)), R = c / (2 * Math.sin(th / 2)); t -= Math.sign(a.b) * R * R / 2 * (th - Math.sin(th)); }
+  }
+  return Math.abs(t);
+}
+function orient(sh) { return signedArea(flatten(sh, 20)) >= 0 ? 1 : -1; }
+function interiorAngle(sh, i) {
+  const P = sh.pts, n = P.length, v = P[i];
+  // направление «входа» и «выхода» с учётом дуг (касательные)
+  const pr = tangentPoint(sh, (i - 1 + n) % n, 1), nx = tangentPoint(sh, i, 0);
+  const a1 = Math.atan2(pr.y - v.y, pr.x - v.x), a2 = Math.atan2(nx.y - v.y, nx.x - v.x);
+  let ang = a1 - a2; while (ang < 0) ang += 2 * Math.PI; while (ang >= 2 * Math.PI) ang -= 2 * Math.PI;
+  if (orient(sh) < 0) ang = 2 * Math.PI - ang;
+  return ang * 180 / Math.PI;
+}
+// точка на стене i, близкая к её началу (end=0) или концу (end=1) — для касательных
+function tangentPoint(sh, i, end) {
+  const P = sh.pts, a = P[i], b = P[(i + 1) % P.length], A = arcOf(a, b, a.b);
+  if (!A) return end ? a : b;
+  const base = end ? b : a, ang = Math.atan2(base.y - A.C.y, base.x - A.C.x);
+  const t = ang + (end ? -1 : 1) * A.dir * 0.01;
+  return {x: A.C.x + A.R * Math.cos(t), y: A.C.y + A.R * Math.sin(t)};
+}
+function lineInt(p, d, q, e) { const den = d.x * e.y - d.y * e.x; if (Math.abs(den) < 1e-9) return null; const t = ((q.x - p.x) * e.y - (q.y - p.y) * e.x) / den; return {x: p.x + d.x * t, y: p.y + d.y * t}; }
+function selfIntersects(poly) {
+  const n = poly.length; if (n < 4 || n > 1500) return false;
+  const I = (a, b, c, d) => { const o = (p, q, r) => Math.sign((q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0])); return o(a, b, c) * o(a, b, d) < 0 && o(c, d, a) * o(c, d, b) < 0; };
+  for (let i = 0; i < n; i++) for (let j = i + 2; j < n; j++) { if (i === 0 && j === n - 1) continue; if (I(poly[i], poly[(i + 1) % n], poly[j], poly[(j + 1) % n])) return true; }
+  return false;
+}
+function labelPoint(poly) {
+  const bb = bboxOf(poly); let best = null, bd = -1;
+  const c = poly.reduce((s, p) => [s[0] + p[0] / poly.length, s[1] + p[1] / poly.length], [0, 0]);
+  const cand = [c];
+  for (let i = 1; i < 12; i++) for (let j = 1; j < 12; j++) cand.push([bb.x0 + bb.w * i / 12, bb.y0 + bb.h * j / 12]);
+  for (const p of cand) {
+    if (!pip(poly, p[0], p[1])) continue;
+    let md = Infinity; for (let i = 0; i < poly.length; i++) { const a = poly[i], b = poly[(i + 1) % poly.length]; md = Math.min(md, segDist({x: p[0], y: p[1]}, {x: a[0], y: a[1]}, {x: b[0], y: b[1]}).d); }
+    const score = md - (p === c ? -md * 0.15 : 0);
+    if (score > bd) { bd = score; best = p; }
+  }
+  return best || c;
+}
+function cleanPts(pts, tol) {
+  tol = tol || 0.5; let P = pts.slice(), ch = true;
+  while (ch && P.length > 3) {
+    ch = false;
+    for (let i = 0; i < P.length; i++) {
+      const a = P[(i - 1 + P.length) % P.length], v = P[i], b = P[(i + 1) % P.length];
+      if (dist(a, v) < tol) { P.splice(i, 1); ch = true; break; }
+      if (a.b || v.b) continue;
+      const cr = Math.abs((v.x - a.x) * (b.y - a.y) - (v.y - a.y) * (b.x - a.x)) / (dist(a, b) || 1);
+      const dt = (v.x - a.x) * (b.x - v.x) + (v.y - a.y) * (b.y - v.y);
+      if (cr < tol && dt > 0) { P.splice(i, 1); ch = true; break; }
+    }
+  }
+  return P;
+}
+const fmt = v => Math.round(v).toLocaleString('ru-RU').replace(/\u00a0/g, ' ');
+const fmtA = v => (v / 1e6).toLocaleString('ru-RU', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+/* ---------------- история ---------------- */
+let hist = [], hpos = -1;
+function snap() { return JSON.stringify({shapes: S.shapes, sel: S.sel}); }
+function commit() {
+  const s = snap();
+  if (hist[hpos] === s) return;
+  hist = hist.slice(0, hpos + 1); hist.push(s); if (hist.length > 300) hist.shift(); hpos = hist.length - 1;
+  autosave(); updUndo();
+}
+function restore(s) { const o = JSON.parse(s); S.shapes = o.shapes; S.sel = o.sel; S.selV = S.selE = -1; S.multi = []; render(); panel(); autosave(); }
+function undo() { if (S.draw && S.draw.pts.length) { S.draw.pts.pop(); if (!S.draw.pts.length) S.draw = null; render(); return; } if (hpos > 0) { hpos--; restore(hist[hpos]); updUndo(); } }
+function redo() { if (hpos < hist.length - 1) { hpos++; restore(hist[hpos]); updUndo(); } }
+function updUndo() { $('bUndo').disabled = hpos <= 0; $('bRedo').disabled = hpos >= hist.length - 1; }
+let saveT = null;
+function autosave() {
+  clearTimeout(saveT);
+  saveT = setTimeout(() => {
+    try {
+      const o = {shapes: S.shapes, view: S.view, opt: S.opt};
+      if (S.ul && S.ul.src.length < 3.5e6) o.ul = S.ul;
+      localStorage.setItem(S.embed ? LS_KEY + '_embed' : LS_KEY, JSON.stringify(o));
+    } catch (e) { try { localStorage.setItem(S.embed ? LS_KEY + '_embed' : LS_KEY, JSON.stringify({shapes: S.shapes, view: S.view, opt: S.opt})); } catch (e2) {} }
+  }, 400);
+}
+
+/* ---------------- вид ---------------- */
+const W2S = p => ({x: S.view.ox + p.x * S.view.s, y: S.view.oy + p.y * S.view.s});
+const S2W = (x, y) => ({x: (x - S.view.ox) / S.view.s, y: (y - S.view.oy) / S.view.s});
+function stageSize() { const r = stage.getBoundingClientRect(); return {w: r.width, h: r.height}; }
+function fitAll(pad) {
+  const {w, h} = stageSize(); pad = pad || 70;
+  let pts = []; S.shapes.forEach(s => { if (!s.hidden) pts = pts.concat(flatten(s, 50)); });
+  if (S.ul) { pts.push([S.ul.x, S.ul.y], [S.ul.x + S.ul.w * S.ul.k, S.ul.y + S.ul.h * S.ul.k]); }
+  if (S.draw) S.draw.pts.forEach(p => pts.push([p.x, p.y]));
+  if (!pts.length) { S.view.s = Math.min(w, h) / 9000; S.view.ox = w / 2 - 3000 * S.view.s; S.view.oy = h / 2 - 2000 * S.view.s; render(); return; }
+  const bb = bboxOf(pts); const bw = Math.max(bb.w, 1500), bh = Math.max(bb.h, 1000);
+  S.view.s = Math.min((w - 2 * pad) / bw, (h - 2 * pad) / bh);
+  S.view.ox = w / 2 - (bb.x0 + bb.w / 2) * S.view.s; S.view.oy = h / 2 - (bb.y0 + bb.h / 2) * S.view.s;
+  render();
+}
+function zoomAt(f, sx, sy) {
+  const s2 = Math.max(0.004, Math.min(8, S.view.s * f)); const w = S2W(sx, sy);
+  S.view.s = s2; S.view.ox = sx - w.x * s2; S.view.oy = sy - w.y * s2; render(); autosave();
+}
+
+/* ---------------- привязки ---------------- */
+const SNAP_PX = 10;
+function allVerts(exclude) {
+  const out = [];
+  for (const sh of S.shapes) { if (sh.hidden) continue; sh.pts.forEach((p, i) => { if (exclude && exclude.id === sh.id && exclude.i === i) return; out.push(p); }); }
+  return out;
+}
+function roundStep(v) { const st = S.opt.step; return Math.round(v / st) * st; }
+/* точка для рисования: from — предыдущая точка (или null) */
+function snapDraw(raw, from, shift, extra) {
+  S.guides = []; S.snapMark = null;
+  const tol = SNAP_PX / S.view.s;
+  const verts = allVerts().concat(extra || []);
+  if (S.opt.snap) {
+    for (const v of verts) if (dist(v, raw) < tol) { S.snapMark = v; return {x: v.x, y: v.y, snapped: true}; }
+  }
+  const ortho = S.opt.ortho !== !!shift;
+  let p;
+  if (from) {
+    let dx = raw.x - from.x, dy = raw.y - from.y, L = Math.hypot(dx, dy), ang = Math.atan2(dy, dx);
+    if (ortho) { if (Math.abs(dx) >= Math.abs(dy)) { dy = 0; } else { dx = 0; } L = Math.abs(dx) + Math.abs(dy); ang = Math.atan2(dy, dx); }
+    else { const st = Math.PI / 12, a2 = Math.round(ang / st) * st; if (Math.abs(a2 - ang) < 0.035) ang = a2; }
+    L = roundStep(L);
+    p = {x: from.x + Math.cos(ang) * L, y: from.y + Math.sin(ang) * L};
+    if (Math.abs(p.x - from.x) < 1e-6) p.x = from.x; if (Math.abs(p.y - from.y) < 1e-6) p.y = from.y;
+    // выравнивание по другим точкам (вдоль направления)
+    if (S.opt.snap) {
+      let bx = null, by = null;
+      for (const v of verts) {
+        if (v === from) continue;
+        if (Math.abs(v.x - p.x) < tol && (bx === null || Math.abs(v.x - p.x) < Math.abs(bx.x - p.x))) bx = v;
+        if (Math.abs(v.y - p.y) < tol && (by === null || Math.abs(v.y - p.y) < Math.abs(by.y - p.y))) by = v;
+      }
+      if (ortho) {
+        if (p.y === from.y && bx) { p.x = bx.x; S.guides.push([bx, p]); }
+        else if (p.x === from.x && by) { p.y = by.y; S.guides.push([by, p]); }
+      } else {
+        if (bx) { p.x = bx.x; S.guides.push([bx, p]); }
+        if (by) { p.y = by.y; S.guides.push([by, p]); }
+      }
+    }
+  } else {
+    p = {x: roundStep(raw.x), y: roundStep(raw.y)};
+    if (S.opt.snap) {
+      for (const v of verts) {
+        if (Math.abs(v.x - raw.x) < tol) { p.x = v.x; S.guides.push([v, p]); break; }
+      }
+      for (const v of verts) {
+        if (Math.abs(v.y - raw.y) < tol) { p.y = v.y; S.guides.push([v, p]); break; }
+      }
+    }
+  }
+  return p;
+}
+
+/* ---------------- отрисовка ---------------- */
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c])); }
+function pathOf(sh) {
+  const P = sh.pts, n = P.length; if (!n) return '';
+  let d = ''; const s0 = W2S(P[0]); d += 'M' + s0.x.toFixed(1) + ' ' + s0.y.toFixed(1);
+  for (let i = 0; i < n; i++) {
+    const a = P[i], b = P[(i + 1) % n], sb = W2S(b), A = arcOf(a, b, a.b);
+    if (A) d += 'A' + (A.R * S.view.s).toFixed(1) + ' ' + (A.R * S.view.s).toFixed(1) + ' 0 ' + (A.sweep > Math.PI ? 1 : 0) + ' ' + (A.dir > 0 ? 1 : 0) + ' ' + sb.x.toFixed(1) + ' ' + sb.y.toFixed(1);
+    else d += 'L' + sb.x.toFixed(1) + ' ' + sb.y.toFixed(1);
+  }
+  return d + 'Z';
+}
+function txt(x, y, s, o) {
+  o = o || {};
+  const rot = o.rot ? ' transform="rotate(' + o.rot.toFixed(1) + ' ' + x.toFixed(1) + ' ' + y.toFixed(1) + ')"' : '';
+  return '<text x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '"' + rot + ' text-anchor="' + (o.anchor || 'middle') + '" dominant-baseline="central" font-size="' + (o.size || 12) + '" font-weight="' + (o.w || 700) + '" fill="' + (o.fill || '#1a1a2e') + '" style="paint-order:stroke;stroke:#fff;stroke-width:' + (o.halo || 4) + 'px;stroke-linejoin:round">' + esc(s) + '</text>';
+}
+function gridSvg(w, h) {
+  if (!S.opt.grid) return '';
+  const steps = [10, 50, 100, 500, 1000, 5000, 10000, 50000];
+  let mi = steps.find(st => st * S.view.s >= 11) || 50000; const ma = mi * 10;
+  const g = (st, col, wd) => {
+    let d = ''; const x0 = Math.floor(S2W(0, 0).x / st) * st, x1 = S2W(w, 0).x, y0 = Math.floor(S2W(0, 0).y / st) * st, y1 = S2W(0, h).y;
+    for (let x = x0; x <= x1; x += st) { const sx = S.view.ox + x * S.view.s; d += 'M' + sx.toFixed(1) + ' 0V' + h; }
+    for (let y = y0; y <= y1; y += st) { const sy = S.view.oy + y * S.view.s; d += 'M0 ' + sy.toFixed(1) + 'H' + w; }
+    return '<path d="' + d + '" stroke="' + col + '" stroke-width="' + wd + '" fill="none"/>';
+  };
+  return g(mi, '#f1f3f6', 1) + g(ma, '#e2e6ec', 1);
+}
+function dimLabels(sh, selected) {
+  let out = ''; const P = sh.pts, n = P.length, o = orient(sh);
+  for (let i = 0; i < n; i++) {
+    const a = P[i], b = P[(i + 1) % n], A = arcOf(a, b, a.b);
+    const L = A ? A.len : dist(a, b); if (L * S.view.s < 26) continue;
+    const c = dist(a, b) || 1, d = {x: (b.x - a.x) / c, y: (b.y - a.y) / c}, nn = {x: -d.y * o, y: d.x * o};
+    const base = A ? A.M : {x: (a.x + b.x) / 2, y: (a.y + b.y) / 2};
+    const sp = W2S(base); const off = 15;
+    // наружу: против внутренней нормали
+    const px = sp.x - nn.x * off, py = sp.y - nn.y * off;
+    let ang = Math.atan2(d.y, d.x) * 180 / Math.PI; if (ang > 90) ang -= 180; if (ang <= -90) ang += 180;
+    const label = A ? 'R ' + fmt(A.R) + ' · ' + fmt(L) : fmt(L);
+    const col = (selected && S.selE === i) ? '#e65100' : (sh.kind === 'cut' ? '#555' : '#c00000');
+    out += txt(px, py, label, {rot: ang, size: selected ? 12.5 : 11.5, fill: col});
+  }
+  return out;
+}
+function angleLabels(sh) {
+  let out = ''; const P = sh.pts, n = P.length; if (n < 3) return '';
+  const o = orient(sh);
+  for (let i = 0; i < n; i++) {
+    const ang = interiorAngle(sh, i);
+    const r90 = Math.abs(ang - 90) < 0.05 || Math.abs(ang - 270) < 0.05;
+    if (r90 && !S.opt.allAngles) continue;
+    const v = P[i], pr = tangentPoint(sh, (i - 1 + n) % n, 1), nx = tangentPoint(sh, i, 0);
+    const a1 = Math.atan2(pr.y - v.y, pr.x - v.x), a2 = Math.atan2(nx.y - v.y, nx.x - v.x);
+    let bis = (a1 + a2) / 2; let diff = a1 - a2; while (diff < 0) diff += 2 * Math.PI;
+    // биссектриса внутрь
+    let bx = Math.cos(bis), by = Math.sin(bis);
+    const test = {x: v.x + bx * 30 / S.view.s, y: v.y + by * 30 / S.view.s};
+    const poly = flatten(sh, 20);
+    if (!pip(poly, test.x, test.y)) { bx = -bx; by = -by; }
+    const sv = W2S(v);
+    const t = (Math.round(ang * 10) / 10).toLocaleString('ru-RU') + '°';
+    out += txt(sv.x + bx * 26, sv.y + by * 26, t, {size: 11, fill: '#1565c0', w: 700});
+  }
+  return out;
+}
+let L_bg, L_grid, L_ul, L_main;
+function ensureLayers() {
+  if (L_main) return;
+  const NS = 'http://www.w3.org/2000/svg';
+  svg.innerHTML = '<defs><pattern id="hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="8" height="8" fill="rgba(120,125,135,.10)"/><line x1="0" y1="0" x2="0" y2="8" stroke="#9aa0a8" stroke-width="1.4"/></pattern></defs><rect id="lBg" fill="#fff"/><g id="lGrid"></g><image id="lUl" preserveAspectRatio="none"/><g id="lMain"></g>';
+  L_bg = svg.querySelector('#lBg'); L_grid = svg.querySelector('#lGrid'); L_ul = svg.querySelector('#lUl'); L_main = svg.querySelector('#lMain');
+}
+function render() {
+  const {w, h} = stageSize();
+  svg.setAttribute('viewBox', '0 0 ' + w + ' ' + h);
+  ensureLayers();
+  L_bg.setAttribute('width', w); L_bg.setAttribute('height', h);
+  L_grid.innerHTML = gridSvg(w, h);
+  if (S.ul) {
+    const p = W2S({x: S.ul.x, y: S.ul.y});
+    if (L_ul.getAttribute('href') !== S.ul.src) L_ul.setAttribute('href', S.ul.src);
+    L_ul.setAttribute('x', p.x.toFixed(1)); L_ul.setAttribute('y', p.y.toFixed(1));
+    L_ul.setAttribute('width', Math.max(1, S.ul.w * S.ul.k * S.view.s).toFixed(1)); L_ul.setAttribute('height', Math.max(1, S.ul.h * S.ul.k * S.view.s).toFixed(1));
+    L_ul.setAttribute('opacity', S.ul.op / 100); L_ul.style.display = '';
+  } else { L_ul.style.display = 'none'; if (L_ul.getAttribute('href')) L_ul.setAttribute('href', ''); }
+  let o = '';
+  // фигуры: сначала помещения, затем зоны, затем вырезы
+  const order = ['room', 'zone', 'cut'];
+  const list = S.shapes.filter(s => !s.hidden).sort((a, b) => order.indexOf(a.kind) - order.indexOf(b.kind));
+  for (const sh of list) {
+    const K = KIND[sh.kind] || KIND.room, isSel = sh.id === S.sel, isMul = S.multi.includes(sh.id);
+    const hov = S.hover && S.hover.sh === sh && S.hover.type === 'shape';
+    o += '<path d="' + pathOf(sh) + '" fill="' + (isSel || hov ? K.fillSel : K.fill) + '" stroke="' + (isMul ? '#1565c0' : K.stroke) + '" stroke-width="' + (isSel ? 2.6 : 2) + '" stroke-linejoin="round"' + (sh.kind === 'zone' ? ' stroke-dasharray="8 5"' : '') + '/>';
+  }
+  for (const sh of list) {
+    const isSel = sh.id === S.sel;
+    o += dimLabels(sh, isSel);
+    if (isSel || S.opt.allAngles) o += angleLabels(sh);
+    const poly = flatten(sh, 30); const lp = labelPoint(poly), sp = W2S({x: lp[0], y: lp[1]});
+    const ar = shArea(sh);
+    if (Math.sqrt(ar) * S.view.s > 50) {
+      o += txt(sp.x, sp.y - 9, sh.name, {size: 12.5, w: 700, fill: sh.kind === 'cut' ? '#555' : '#1a1a2e'});
+      o += txt(sp.x, sp.y + 9, fmtA(ar) + ' м²', {size: 12, w: 600, fill: '#6b7280'});
+    }
+  }
+  // подсветка стены под мышью
+  if (S.hover && (S.hover.type === 'edge' || S.hover.type === 'mid')) {
+    const sh = S.hover.sh, i = S.hover.i, a = sh.pts[i], b = sh.pts[(i + 1) % sh.pts.length];
+    const tmp = {pts: [a, b]}; const fl = []; flattenEdge(a, b, a.b, fl); fl.push([b.x, b.y]);
+    o += '<polyline points="' + fl.map(p => { const s = W2S({x: p[0], y: p[1]}); return s.x.toFixed(1) + ',' + s.y.toFixed(1); }).join(' ') + '" fill="none" stroke="#ff9800" stroke-width="5" stroke-opacity=".55" stroke-linecap="round"/>';
+  }
+  // ручки выбранной фигуры
+  const ss = S.shapes.find(s => s.id === S.sel);
+  if (ss && !ss.hidden && (S.tool === 'select' || S.tool === 'arc')) {
+    const n = ss.pts.length;
+    for (let i = 0; i < n; i++) {
+      const a = ss.pts[i], b = ss.pts[(i + 1) % n], A = arcOf(a, b, a.b);
+      const m = A ? A.M : {x: (a.x + b.x) / 2, y: (a.y + b.y) / 2}, sm = W2S(m);
+      if (dist(a, b) * S.view.s > 34) o += '<rect x="' + (sm.x - 4.5).toFixed(1) + '" y="' + (sm.y - 4.5).toFixed(1) + '" width="9" height="9" transform="rotate(45 ' + sm.x.toFixed(1) + ' ' + sm.y.toFixed(1) + ')" fill="#fff" stroke="#ff9800" stroke-width="1.6"/>';
+    }
+    ss.pts.forEach((p, i) => { const s = W2S(p); const on = i === S.selV; o += '<circle cx="' + s.x.toFixed(1) + '" cy="' + s.y.toFixed(1) + '" r="' + (on ? 7 : 5.5) + '" fill="' + (on ? '#e65100' : '#1565c0') + '" stroke="#fff" stroke-width="2"/>'; });
+  }
+  // рисование стен
+  if (S.draw && S.draw.pts.length) {
+    const P = S.draw.pts;
+    const pts = P.map(W2S);
+    o += '<polyline points="' + pts.map(p => p.x.toFixed(1) + ',' + p.y.toFixed(1)).join(' ') + '" fill="none" stroke="#c00000" stroke-width="2.6" stroke-linejoin="round"/>';
+    for (let i = 0; i + 1 < P.length; i++) {
+      const a = P[i], b = P[i + 1], L = dist(a, b), sp = W2S({x: (a.x + b.x) / 2, y: (a.y + b.y) / 2});
+      let ang = Math.atan2(b.y - a.y, b.x - a.x) * 180 / Math.PI; if (ang > 90) ang -= 180; if (ang <= -90) ang += 180;
+      const nx = -(b.y - a.y) / (L || 1), ny = (b.x - a.x) / (L || 1);
+      o += txt(sp.x - nx * 14, sp.y - ny * 14, fmt(L), {rot: ang, fill: '#c00000'});
+    }
+    if (S.cursor) {
+      const last = P[P.length - 1], sl = W2S(last), sc = W2S(S.cursor);
+      o += '<line x1="' + sl.x + '" y1="' + sl.y + '" x2="' + sc.x + '" y2="' + sc.y + '" stroke="#c00000" stroke-width="2" stroke-dasharray="7 5"/>';
+      const L = dist(last, S.cursor);
+      if (L > 0) {
+        let ang = Math.atan2(S.cursor.y - last.y, S.cursor.x - last.x) * 180 / Math.PI; let ra = ang; if (ra > 90) ra -= 180; if (ra <= -90) ra += 180;
+        const mid = {x: (sl.x + sc.x) / 2, y: (sl.y + sc.y) / 2}; const nx = -(sc.y - sl.y) / (dist(sl, sc) || 1), ny = (sc.x - sl.x) / (dist(sl, sc) || 1);
+        o += txt(mid.x - nx * 15, mid.y - ny * 15, fmt(L) + ' мм', {rot: ra, size: 13, fill: '#c00000'});
+      }
+    }
+    pts.forEach((p, i) => { o += '<circle cx="' + p.x + '" cy="' + p.y + '" r="' + (i === 0 ? 6.5 : 4.5) + '" fill="' + (i === 0 ? '#2e7d32' : '#1565c0') + '" stroke="#fff" stroke-width="2"/>'; });
+    if (P.length >= 3 && S.cursor && dist(S.cursor, P[0]) < 0.5) o += '<circle cx="' + pts[0].x + '" cy="' + pts[0].y + '" r="14" fill="none" stroke="#2e7d32" stroke-width="2.5"/>' + txt(pts[0].x, pts[0].y - 24, 'Замкнуть', {size: 11, fill: '#2e7d32'});
+  }
+  // прямоугольник
+  if (S.rect && S.rect.a && S.rect.b) {
+    const a = S.rect.a, b = S.rect.b, sa = W2S(a), sb = W2S(b);
+    const x = Math.min(sa.x, sb.x), y = Math.min(sa.y, sb.y);
+    o += '<rect x="' + x + '" y="' + y + '" width="' + Math.abs(sb.x - sa.x) + '" height="' + Math.abs(sb.y - sa.y) + '" fill="rgba(192,0,0,.06)" stroke="#c00000" stroke-width="2" stroke-dasharray="7 5"/>';
+    o += txt((sa.x + sb.x) / 2, y - 14, fmt(Math.abs(b.x - a.x)), {fill: '#c00000', size: 13});
+    o += txt(x - 14, (sa.y + sb.y) / 2, fmt(Math.abs(b.y - a.y)), {fill: '#c00000', size: 13, rot: -90});
+  }
+  // линия разреза / рулетка / калибровка
+  const lineTool = (L, col, label) => {
+    if (!L || !L.a) return; const b = L.b || S.cursor; if (!b) return;
+    const sa = W2S(L.a), sb = W2S(b);
+    o += '<line x1="' + sa.x + '" y1="' + sa.y + '" x2="' + sb.x + '" y2="' + sb.y + '" stroke="' + col + '" stroke-width="2.2" stroke-dasharray="8 5"/>';
+    o += '<circle cx="' + sa.x + '" cy="' + sa.y + '" r="4.5" fill="' + col + '"/><circle cx="' + sb.x + '" cy="' + sb.y + '" r="4.5" fill="' + col + '"/>';
+    if (label) { let ang = Math.atan2(sb.y - sa.y, sb.x - sa.x) * 180 / Math.PI; if (ang > 90) ang -= 180; if (ang <= -90) ang += 180; o += txt((sa.x + sb.x) / 2, (sa.y + sb.y) / 2 - 14, label(dist(L.a, b)), {fill: col, size: 13, rot: ang}); }
+  };
+  lineTool(S.knife, '#6a1b9a');
+  lineTool(S.meas, '#e65100', L => fmt(L) + ' мм');
+  lineTool(S.calib, '#1565c0', L => S.ul ? 'на плане ' + fmt(L) + ' мм' : '');
+  // направляющие и привязка
+  for (const g of S.guides) { const a = W2S(g[0]), b = W2S(g[1]); o += '<line x1="' + a.x + '" y1="' + a.y + '" x2="' + b.x + '" y2="' + b.y + '" stroke="#1565c0" stroke-width="1" stroke-dasharray="3 4"/>'; }
+  if (S.snapMark) { const s = W2S(S.snapMark); o += '<rect x="' + (s.x - 7) + '" y="' + (s.y - 7) + '" width="14" height="14" fill="none" stroke="#2e7d32" stroke-width="2"/>'; }
+  if ((S.tool === 'walls' || S.tool === 'rect') && S.cursor && !(S.draw && S.draw.pts.length) && !(S.rect && S.rect.a)) {
+    const s = W2S(S.cursor); o += '<path d="M' + (s.x - 9) + ' ' + s.y + 'H' + (s.x + 9) + 'M' + s.x + ' ' + (s.y - 9) + 'V' + (s.y + 9) + '" stroke="#c00000" stroke-width="1.6"/>';
+  }
+  L_main.innerHTML = o;
+  $('zoomV').textContent = Math.round(S.view.s / 0.08 * 100) + '%';
+  hint();
+  posHud();
+}
+
+/* ---------------- подсказка ---------------- */
+function hint() {
+  const H = $('hint'); let t = '';
+  if (S.tool === 'walls') {
+    if (!S.draw || !S.draw.pts.length) t = 'Кликните — первый угол помещения. Дальше кликайте по углам или набирайте длины стен с клавиатуры.';
+    else if (S.draw.pts.length < 3) t = 'Кликайте по углам или наберите <b>длину</b> и Enter — стена пойдёт туда, куда смотрит мышь (если мышь не двигали — поворот направо). <b>3500&lt;45</b> — под углом. Shift — без ортогональности.';
+    else t = 'Клик по первой точке или <b>Enter</b> — замкнуть. Backspace — убрать последнюю точку, Esc — отменить.';
+  } else if (S.tool === 'rect') t = S.rect && S.rect.a ? 'Отпустите мышь — помещение готово. Или наберите <b>4500x3200</b> и Enter.' : 'Протяните мышью прямоугольник или наберите <b>4500x3200</b> и Enter.';
+  else if (S.tool === 'arc') t = 'Потяните любую стену в сторону — она станет дугой. Радиус можно точно задать в таблице стен справа.';
+  else if (S.tool === 'knife') t = S.knife && S.knife.a ? 'Кликните вторую точку линии разреза.' : 'Кликните две точки линии, по которой разделить помещение на зоны.';
+  else if (S.tool === 'measure') t = 'Кликните две точки — покажу расстояние.';
+  else if (S.tool === 'calib') t = !S.ul ? 'Сначала загрузите проект (кнопка вверху).' : S.calib && S.calib.a ? 'Кликните вторую точку известного размера.' : 'Кликните начало известного размера на плане (например, стены с подписанной длиной).';
+  else if (S.tool === 'wand') t = !S.ul ? 'Сначала загрузите проект (кнопка вверху).' : 'Кликните внутри комнаты на плане — контур найдётся сам.';
+  else if (S.tool === 'pan') t = 'Тяните, чтобы двигать вид. Колесо — масштаб.';
+  else if (S.tool === 'ulmove') t = 'Тяните план мышью, чтобы совместить с чертежом. Esc — закончить.';
+  else {
+    if (!S.shapes.length) t = 'Начните: <b>W</b> — стены, <b>R</b> — прямоугольник, «Шаблон», «По замерам» или загрузите проект.';
+    else if (S.sel) t = 'Тяните точки и стены. Ромбик в середине стены — дуга. Двойной клик — новая точка. Правый клик — меню.';
+    else t = 'Кликните по помещению, чтобы править. Shift+клик — выделить несколько для объединения.';
+  }
+  H.innerHTML = t; H.style.display = t ? '' : 'none';
+}
+let toastT;
+function toast(m, err) { const t = $('toast'); t.textContent = m; t.classList.toggle('err', !!err); t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 2600); }
+
+/* ---------------- ввод с клавиатуры (HUD) ---------------- */
+const hud = $('hud'), hudIn = $('hudIn');
+let lastMouse = {x: 0, y: 0};
+function hudOpen(ch) {
+  hud.style.display = 'flex'; hudIn.value = ch || ''; hudIn.focus();
+  $('hudTip').textContent = S.tool === 'rect' ? 'Д x Ш, Enter' : 'мм  ·  длина<угол';
+  posHud();
+}
+function hudClose() { hud.style.display = 'none'; hudIn.value = ''; svg.focus && stage.focus(); }
+function posHud() { if (hud.style.display !== 'flex') return; const {w, h} = stageSize(); hud.style.left = Math.min(w - 220, lastMouse.x + 18) + 'px'; hud.style.top = Math.min(h - 50, lastMouse.y + 18) + 'px'; }
+hudIn.addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); const v = hudIn.value.trim(); hudClose(); applyTyped(v); }
+  else if (e.key === 'Escape') { e.preventDefault(); hudClose(); }
+  e.stopPropagation();
+});
+function parseNum(s) { return parseFloat(String(s).replace(',', '.').replace(/\s/g, '')); }
+function applyTyped(v) {
+  if (!v) return;
+  if (S.tool === 'rect') {
+    const m = v.split(/[x×х*]/i); const L = parseNum(m[0]), W = parseNum(m[1] || m[0]);
+    if (!(L > 0 && W > 0)) { toast('Формат: 4500x3200', true); return; }
+    const a = S.rect && S.rect.a ? S.rect.a : (S.cursor ? {x: roundStep(S.cursor.x), y: roundStep(S.cursor.y)} : {x: 0, y: 0});
+    addShape(rectPts(a.x, a.y, L, W), S.drawKind); S.rect = null; return;
+  }
+  if (S.tool === 'walls') {
+    if (!S.draw || !S.draw.pts.length) { toast('Сначала кликните первую точку', true); return; }
+    const last = S.draw.pts[S.draw.pts.length - 1];
+    let L, ang;
+    const m = v.split('<');
+    L = parseNum(m[0]);
+    if (!(L > 0)) { toast('Введите длину в мм, например 3500', true); return; }
+    if (m.length > 1) { ang = -parseNum(m[1]) * Math.PI / 180; }   // угол против часовой, 0° — вправо
+    else {
+      const c = S.cursor || {x: last.x + 1, y: last.y};
+      let dx = c.x - last.x, dy = c.y - last.y;
+      if (Math.hypot(dx, dy) < 2 / S.view.s) {
+        const P = S.draw.pts;
+        if (P.length >= 2) { const q = P[P.length - 2]; const px = last.x - q.x, py = last.y - q.y; dx = -py; dy = px; } // по умолчанию — поворот направо
+        else { dx = 1; dy = 0; }
+      }
+      if (S.opt.ortho && !S.shiftDown) { if (Math.abs(dx) >= Math.abs(dy)) dy = 0; else dx = 0; }
+      ang = Math.atan2(dy, dx);
+    }
+    const p = {x: R2(last.x + Math.cos(ang) * L), y: R2(last.y + Math.sin(ang) * L), b: 0};
+    S.draw.pts.push(p); S.cursor = {x: p.x, y: p.y}; render();
+  }
+}
+
+/* ---------------- фигуры ---------------- */
+function rectPts(x, y, L, W) { return [{x, y, b: 0}, {x: x + L, y, b: 0}, {x: x + L, y: y + W, b: 0}, {x, y: y + W, b: 0}]; }
+function nextName(kind) {
+  const base = kind === 'cut' ? 'Колонна' : kind === 'zone' ? 'Зона' : 'Помещение';
+  let k = 1; while (S.shapes.some(s => s.name === base + ' ' + k)) k++; return base + ' ' + k;
+}
+function addShape(pts, kind, name, noSel) {
+  pts = cleanPts(pts.map(p => ({x: R2(p.x), y: R2(p.y), b: p.b || 0})));
+  if (pts.length < 2 || (pts.length < 3 && !pts.some(p => p.b))) { toast('Слишком мало точек', true); return null; }
+  const sh = {id: uid(), name: name || nextName(kind || 'room'), kind: kind || 'room', pts, hidden: false};
+  S.shapes.push(sh); if (!noSel) { S.sel = sh.id; S.selV = S.selE = -1; }
+  commit(); render(); panel();
+  const poly = flatten(sh); if (selfIntersects(poly)) toast('Внимание: стены пересекаются — проверьте контур', true);
+  return sh;
+}
+const cur = () => S.shapes.find(s => s.id === S.sel);
+function finishDraw() {
+  if (!S.draw) return;
+  const P = S.draw.pts.slice();
+  if (P.length > 2 && dist(P[0], P[P.length - 1]) < 0.5) P.pop();
+  if (P.length < 3) { toast('Нужно минимум 3 угла', true); return; }
+  S.draw = null; S.cursor = null; S.guides = []; S.snapMark = null;
+  addShape(P, S.drawKind);
+}
+
+/* ---------------- правка: длины, углы, дуги, скругления ---------------- */
+// изменить длину стены i: следующая стена сдвигается параллельно (соседние «тянутся»)
+function setEdgeLength(sh, i, L) {
+  const P = sh.pts, n = P.length, a = P[i], b = P[(i + 1) % n];
+  if (a.b) { // дуга: меняем длину дуги при том же радиусе? проще — масштабируем хорду
+    const A = arcOf(a, b, a.b); const k = L / A.len; moveVertexAlong(sh, i, k * A.chord); return;
+  }
+  moveVertexAlong(sh, i, L);
+}
+function moveVertexAlong(sh, i, chordL) {
+  const P = sh.pts, n = P.length, a = P[i], b = P[(i + 1) % n], c0 = dist(a, b) || 1;
+  const d = {x: (b.x - a.x) / c0, y: (b.y - a.y) / c0}, delta = chordL - c0;
+  const mv = {x: d.x * delta, y: d.y * delta};
+  if (n <= 3) { b.x = R2(b.x + mv.x); b.y = R2(b.y + mv.y); return; }
+  const c = P[(i + 2) % n];
+  b.x = R2(b.x + mv.x); b.y = R2(b.y + mv.y);
+  // сдвигаем следующую стену параллельно, если она не параллельна текущей
+  const cr = Math.abs(d.x * (c.y - (b.y - mv.y)) - d.y * (c.x - (b.x - mv.x))) / (dist({x: b.x - mv.x, y: b.y - mv.y}, c) || 1);
+  if (cr > 0.02) {
+    // точка c скользит по линии стены (i+2) так, чтобы стена (i+1) осталась параллельной
+    const e = P[(i + 3) % n];
+    const dirBC = {x: c.x - (b.x - mv.x), y: c.y - (b.y - mv.y)};
+    const dirCE = {x: e.x - c.x, y: e.y - c.y};
+    const q = lineInt(b, dirBC, c, dirCE);
+    if (q && dist(q, c) < Math.abs(delta) * 50 + 1) { c.x = R2(q.x); c.y = R2(q.y); }
+  }
+}
+function setInteriorAngle(sh, i, deg) {
+  const P = sh.pts, n = P.length, v = P[i], nx = P[(i + 1) % n];
+  const cur = interiorAngle(sh, i); const delta = (deg - cur) * Math.PI / 180 * (orient(sh) > 0 ? -1 : 1);
+  const L = dist(v, nx), ang = Math.atan2(nx.y - v.y, nx.x - v.x) + delta;
+  nx.x = R2(v.x + Math.cos(ang) * L); nx.y = R2(v.y + Math.sin(ang) * L);
+}
+function setRadius(sh, i, R) {
+  const P = sh.pts, a = P[i], b = P[(i + 1) % P.length], c = dist(a, b);
+  if (!(R > 0)) { a.b = 0; return; }
+  if (R < c / 2) { R = c / 2; toast('Радиус не может быть меньше половины стены: ' + fmt(c / 2) + ' мм'); }
+  const sign = a.b ? Math.sign(a.b) : -orient(sh);  // по умолчанию — наружу
+  a.b = bulgeFromR(c, R, sign, Math.abs(a.b) > 1);
+}
+function filletVertex(sh, i, R, chamfer) {
+  const P = sh.pts, n = P.length, v = P[i], pv = P[(i - 1 + n) % n], nv = P[(i + 1) % n];
+  if (pv.b || v.b) { toast('Скругление возможно только между прямыми стенами', true); return false; }
+  const u1 = {x: pv.x - v.x, y: pv.y - v.y}, u2 = {x: nv.x - v.x, y: nv.y - v.y};
+  const l1 = Math.hypot(u1.x, u1.y), l2 = Math.hypot(u2.x, u2.y);
+  u1.x /= l1; u1.y /= l1; u2.x /= l2; u2.y /= l2;
+  const phi = Math.acos(Math.max(-1, Math.min(1, u1.x * u2.x + u1.y * u2.y)));
+  if (phi < 0.01 || phi > Math.PI - 0.01) { toast('Здесь нет угла', true); return false; }
+  const t = chamfer ? R : R / Math.tan(phi / 2);
+  if (t >= l1 - 1 || t >= l2 - 1) { toast('Слишком большой ' + (chamfer ? 'размер фаски' : 'радиус') + ' для этих стен', true); return false; }
+  const p1 = {x: R2(v.x + u1.x * t), y: R2(v.y + u1.y * t), b: 0}, p2 = {x: R2(v.x + u2.x * t), y: R2(v.y + u2.y * t), b: 0};
+  if (!chamfer) {
+    const c = dist(p1, p2), d = {x: (p2.x - p1.x) / c, y: (p2.y - p1.y) / c}, nn = {x: -d.y, y: d.x};
+    const mid = {x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2};
+    const sg = Math.sign((v.x - mid.x) * nn.x + (v.y - mid.y) * nn.y) || 1;
+    p1.b = sg * Math.tan((Math.PI - phi) / 4);
+  }
+  P.splice(i, 1, p1, p2);
+  return true;
+}
+function insertVertex(sh, i, at) {
+  const P = sh.pts, a = P[i], b = P[(i + 1) % P.length], A = arcOf(a, b, a.b);
+  if (A) {
+    // точка в середине дуги, обе половинки — дуги
+    const nb = Math.sign(a.b) * Math.tan(A.sweep / 8);
+    const m = {x: R2(A.M.x), y: R2(A.M.y), b: nb}; a.b = nb; P.splice(i + 1, 0, m); return i + 1;
+  }
+  let q = at ? segDist(at, a, b).q : {x: (a.x + b.x) / 2, y: (a.y + b.y) / 2};
+  if (at) { const L = dist(a, q), c = dist(a, b); const Lr = Math.max(S.opt.step, Math.min(c - S.opt.step, roundStep(L))); q = {x: a.x + (b.x - a.x) * Lr / c, y: a.y + (b.y - a.y) * Lr / c}; }
+  P.splice(i + 1, 0, {x: R2(q.x), y: R2(q.y), b: 0}); return i + 1;
+}
+function orthogonalize(sh, tolDeg) {
+  tolDeg = tolDeg || 6; const P = sh.pts, n = P.length; if (n < 3) return;
+  const lines = [];
+  for (let i = 0; i < n; i++) {
+    const a = P[i], b = P[(i + 1) % n]; const ang = Math.atan2(b.y - a.y, b.x - a.x) * 180 / Math.PI;
+    let snapA = null; for (const t of [-180, -90, 0, 90, 180]) if (Math.abs(ang - t) < tolDeg) snapA = t;
+    const m = {x: (a.x + b.x) / 2, y: (a.y + b.y) / 2};
+    const d = snapA === null || a.b ? {x: b.x - a.x, y: b.y - a.y} : {x: Math.round(Math.cos(snapA * Math.PI / 180)), y: Math.round(Math.sin(snapA * Math.PI / 180))};
+    lines.push({m, d, arc: !!a.b});
+  }
+  const np = [];
+  for (let i = 0; i < n; i++) {
+    const L0 = lines[(i - 1 + n) % n], L1 = lines[i];
+    if (L0.arc || L1.arc) { np.push({x: P[i].x, y: P[i].y, b: P[i].b}); continue; }
+    const q = lineInt(L0.m, L0.d, L1.m, L1.d);
+    np.push(q && dist(q, P[i]) < 2000 ? {x: R2(q.x), y: R2(q.y), b: P[i].b} : {x: P[i].x, y: P[i].y, b: P[i].b});
+  }
+  sh.pts = cleanPts(np);
+}
+function transformShape(sh, f) { sh.pts.forEach(p => { const q = f(p); p.x = R2(q.x); p.y = R2(q.y); }); }
+function centerOf(sh) { const bb = bboxOf(flatten(sh, 30)); return {x: bb.x0 + bb.w / 2, y: bb.y0 + bb.h / 2}; }
+function rotate90(sh) { const c = centerOf(sh); transformShape(sh, p => ({x: c.x - (p.y - c.y), y: c.y + (p.x - c.x)})); }
+function mirror(sh) { const c = centerOf(sh); transformShape(sh, p => ({x: 2 * c.x - p.x, y: p.y})); sh.pts.reverse(); const n = sh.pts.length; const bs = sh.pts.map(p => p.b); for (let i = 0; i < n; i++) sh.pts[i].b = -bs[(i + 1) % n]; }
+
+/* ---------------- булевы операции ---------------- */
+function toPC(sh) { const f = flatten(sh, 1.5); f.push(f[0]); return [f]; }
+function fromPC(mp) {
+  // multipolygon → [{outer:[pts], holes:[[pts]]}]
+  return mp.map(poly => poly.map(ring => { const r = ring.slice(0, -1).map(p => ({x: R2(p[0]), y: R2(p[1]), b: 0})); return cleanPts(r, 1); }));
+}
+function doUnion() {
+  const ids = S.multi.length >= 2 ? S.multi : null;
+  if (!ids) { toast('Выделите 2 и больше помещений: Shift+клик', true); return; }
+  if (typeof polygonClipping === 'undefined') { toast('Не загрузилась библиотека контуров — проверьте интернет', true); return; }
+  const shs = ids.map(id => S.shapes.find(s => s.id === id)).filter(Boolean);
+  let res; try { res = polygonClipping.union(...shs.map(toPC)); } catch (e) { toast('Не удалось объединить', true); return; }
+  const parts = fromPC(res); const base = shs[0];
+  S.shapes = S.shapes.filter(s => !ids.includes(s.id));
+  let first = null;
+  parts.forEach((rings, k) => {
+    const sh = {id: uid(), name: k ? base.name + ' (' + (k + 1) + ')' : base.name, kind: base.kind, pts: rings[0], hidden: false};
+    S.shapes.push(sh); if (!first) first = sh;
+    rings.slice(1).forEach(h => S.shapes.push({id: uid(), name: nextName('cut'), kind: 'cut', pts: h, hidden: false}));
+  });
+  S.multi = []; S.sel = first ? first.id : null; commit(); render(); panel();
+  toast(parts.length === 1 ? 'Помещения объединены' : 'Помещения не соприкасаются — получилось ' + parts.length + ' части');
+}
+function doSubtract() {
+  if (S.multi.length < 2) { toast('Выделите сначала помещение, затем Shift+клик по тому, что вычесть', true); return; }
+  if (typeof polygonClipping === 'undefined') { toast('Не загрузилась библиотека контуров', true); return; }
+  const shs = S.multi.map(id => S.shapes.find(s => s.id === id)).filter(Boolean);
+  const base = shs[0]; let res;
+  try { res = polygonClipping.difference(toPC(base), ...shs.slice(1).map(toPC)); } catch (e) { toast('Не удалось вычесть', true); return; }
+  const parts = fromPC(res);
+  S.shapes = S.shapes.filter(s => s.id !== base.id && !shs.slice(1).includes(s));
+  let first = null;
+  parts.forEach((rings, k) => {
+    const sh = {id: uid(), name: k ? base.name + ' (' + (k + 1) + ')' : base.name, kind: base.kind, pts: rings[0], hidden: false};
+    S.shapes.push(sh); if (!first) first = sh;
+    rings.slice(1).forEach(h => S.shapes.push({id: uid(), name: nextName('cut'), kind: 'cut', pts: h, hidden: false}));
+  });
+  S.multi = []; S.sel = first ? first.id : null; commit(); render(); panel(); toast('Готово');
+}
+function doKnife(a, b) {
+  if (typeof polygonClipping === 'undefined') { toast('Не загрузилась библиотека контуров', true); return; }
+  const L = dist(a, b); if (L < 10) return;
+  const d = {x: (b.x - a.x) / L, y: (b.y - a.y) / L}, nrm = {x: -d.y, y: d.x}, F = 1e7;
+  const P1 = a, far = (p, k) => ({x: p.x + d.x * k, y: p.y + d.y * k});
+  const A1 = far(a, -F), B1 = far(a, F);
+  const half = s => [[[A1.x, A1.y], [B1.x, B1.y], [B1.x + nrm.x * F * s, B1.y + nrm.y * F * s], [A1.x + nrm.x * F * s, A1.y + nrm.y * F * s], [A1.x, A1.y]]];
+  const targets = S.shapes.filter(sh => !sh.hidden && sh.kind !== 'cut' && (S.sel ? sh.id === S.sel : true));
+  let cnt = 0;
+  for (const sh of targets) {
+    const poly = flatten(sh, 1.5);
+    // линия пересекает фигуру?
+    let crosses = false; for (let i = 0; i < poly.length; i++) { const p = poly[i], q = poly[(i + 1) % poly.length]; const s1 = (p[0] - a.x) * nrm.x + (p[1] - a.y) * nrm.y, s2 = (q[0] - a.x) * nrm.x + (q[1] - a.y) * nrm.y; if (s1 * s2 < 0) { crosses = true; break; } }
+    if (!crosses) continue;
+    let r1, r2; try { r1 = polygonClipping.intersection(toPC(sh), half(1)); r2 = polygonClipping.intersection(toPC(sh), half(-1)); } catch (e) { continue; }
+    const parts = fromPC(r1).concat(fromPC(r2)); if (parts.length < 2) continue;
+    const idx = S.shapes.indexOf(sh); S.shapes.splice(idx, 1);
+    parts.forEach((rings, k) => S.shapes.push({id: uid(), name: sh.name + ' · ' + (k === 0 ? 'А' : k === 1 ? 'Б' : 'В' + k), kind: sh.kind === 'room' && k > 0 ? 'room' : sh.kind, pts: rings[0], hidden: false}));
+    cnt++;
+  }
+  if (cnt) { S.sel = null; commit(); render(); panel(); toast(cnt === 1 ? 'Помещение разделено на две части' : 'Разделено помещений: ' + cnt); } else toast('Линия не пересекает помещение', true);
+}
+
+/* ---------------- поиск под мышью ---------------- */
+function hitTest(sx, sy) {
+  const w = S2W(sx, sy);
+  const ss = cur();
+  if (ss && !ss.hidden) {
+    for (let i = 0; i < ss.pts.length; i++) { const s = W2S(ss.pts[i]); if (Math.hypot(s.x - sx, s.y - sy) < 9) return {type: 'vertex', sh: ss, i}; }
+    const n = ss.pts.length;
+    for (let i = 0; i < n; i++) { const a = ss.pts[i], b = ss.pts[(i + 1) % n], A = arcOf(a, b, a.b); const m = W2S(A ? A.M : {x: (a.x + b.x) / 2, y: (a.y + b.y) / 2}); if (dist(a, b) * S.view.s > 34 && Math.hypot(m.x - sx, m.y - sy) < 8) return {type: 'mid', sh: ss, i}; }
+  }
+  const order = ['cut', 'zone', 'room'];
+  const list = S.shapes.filter(s => !s.hidden).sort((a, b) => order.indexOf(a.kind) - order.indexOf(b.kind));
+  if (ss && !ss.hidden) list.unshift(ss);
+  for (const sh of list) {
+    const n = sh.pts.length;
+    for (let i = 0; i < n; i++) {
+      const a = sh.pts[i], b = sh.pts[(i + 1) % n]; const fl = []; flattenEdge(a, b, a.b, fl, 5); fl.push([b.x, b.y]);
+      for (let k = 0; k + 1 < fl.length; k++) { const r = segDist(w, {x: fl[k][0], y: fl[k][1]}, {x: fl[k + 1][0], y: fl[k + 1][1]}); if (r.d * S.view.s < 7) return {type: 'edge', sh, i, q: r.q}; }
+    }
+  }
+  for (const sh of list) if (pip(flatten(sh, 10), w.x, w.y)) return {type: 'shape', sh};
+  return null;
+}
+
+/* ---------------- мышь ---------------- */
+let pointers = new Map(), pinch = null, spaceDown = false;
+function evPos(e) { const r = stage.getBoundingClientRect(); return {x: e.clientX - r.left, y: e.clientY - r.top}; }
+svg.addEventListener('pointerdown', e => {
+  hideCtx();
+  svg.setPointerCapture(e.pointerId);
+  const p = evPos(e); pointers.set(e.pointerId, p); lastMouse = p;
+  if (pointers.size === 2) { const [a, b] = [...pointers.values()]; pinch = {d: Math.hypot(b.x - a.x, b.y - a.y), c: {x: (a.x + b.x) / 2, y: (a.y + b.y) / 2}, s: S.view.s, ox: S.view.ox, oy: S.view.oy}; S.drag = null; return; }
+  if (e.button === 1 || e.button === 2 && false || spaceDown || S.tool === 'pan') { S.drag = {type: 'pan', sx: p.x, sy: p.y, ox: S.view.ox, oy: S.view.oy}; return; }
+  if (e.button === 2) return;
+  const w = S2W(p.x, p.y); S.shiftDown = e.shiftKey;
+  const T = S.tool;
+  if (T === 'walls') {
+    if (!S.draw) S.draw = {pts: []};
+    const P = S.draw.pts;
+    const sp = snapDraw(w, P.length ? P[P.length - 1] : null, e.shiftKey, P.length ? [P[0]] : []);
+    if (P.length >= 3 && dist(sp, P[0]) < 0.5) { finishDraw(); return; }
+    if (P.length && dist(sp, P[P.length - 1]) < 1) return;
+    P.push({x: R2(sp.x), y: R2(sp.y), b: 0}); S.cursor = {x: sp.x, y: sp.y}; render(); return;
+  }
+  if (T === 'rect') { const a = snapDraw(w, null, e.shiftKey); S.rect = {a, b: null}; S.drag = {type: 'rect'}; render(); return; }
+  if (T === 'knife' || T === 'measure' || T === 'calib') {
+    const key = T === 'knife' ? 'knife' : T === 'measure' ? 'meas' : 'calib';
+    if (T === 'calib' && !S.ul) { toast('Сначала загрузите проект', true); return; }
+    const sp = T === 'calib' ? w : snapDraw(w, S[key] && S[key].a && !S[key].b ? S[key].a : null, e.shiftKey);
+    if (!S[key] || S[key].b || !S[key].a) { S[key] = {a: sp, b: null}; render(); return; }
+    S[key].b = sp;
+    if (T === 'knife') { const k = S.knife; S.knife = null; doKnife(k.a, k.b); }
+    if (T === 'calib') { const c = S.calib; askNumber('Масштаб плана', 'Какой реальный размер между точками? Сейчас на плане: ' + fmt(dist(c.a, c.b)) + ' мм.', Math.round(dist(c.a, c.b)), v => calibrate(c.a, c.b, v), () => { S.calib = null; render(); }); }
+    render(); return;
+  }
+  if (T === 'wand') { if (!S.ul) { toast('Сначала загрузите проект', true); return; } wandAt(w); return; }
+  if (T === 'ulmove') { if (S.ul) S.drag = {type: 'ul', sx: p.x, sy: p.y, x: S.ul.x, y: S.ul.y}; return; }
+  // выбор / дуга
+  const h = hitTest(p.x, p.y);
+  if (T === 'arc') {
+    if (h && (h.type === 'edge' || h.type === 'mid')) { S.sel = h.sh.id; S.selE = h.i; S.drag = {type: 'bulge', sh: h.sh, i: h.i, moved: false}; render(); panel(); }
+    return;
+  }
+  if (e.shiftKey && h && h.sh) {
+    // мультивыбор
+    if (!S.multi.length && S.sel && S.sel !== h.sh.id) S.multi.push(S.sel);
+    const k = S.multi.indexOf(h.sh.id); if (k >= 0) S.multi.splice(k, 1); else S.multi.push(h.sh.id);
+    render(); panel(); return;
+  }
+  S.multi = [];
+  if (!h) { S.sel = null; S.selV = S.selE = -1; S.drag = {type: 'pan', sx: p.x, sy: p.y, ox: S.view.ox, oy: S.view.oy, click: true}; render(); panel(); return; }
+  const prevSel = S.sel; S.sel = h.sh.id;
+  if (h.type === 'vertex') { S.selV = h.i; S.selE = -1; S.drag = {type: 'vertex', sh: h.sh, i: h.i, moved: false}; }
+  else if (h.type === 'mid') { S.selE = h.i; S.selV = -1; S.drag = {type: 'bulge', sh: h.sh, i: h.i, moved: false}; }
+  else if (h.type === 'edge' && prevSel === h.sh.id) { S.selE = h.i; S.selV = -1; startEdgeDrag(h.sh, h.i, w); }
+  else { S.selV = -1; S.selE = h.type === 'edge' ? h.i : -1; S.drag = {type: 'move', sh: h.sh, start: w, orig: h.sh.pts.map(q => ({x: q.x, y: q.y})), moved: false}; }
+  render(); panel();
+});
+function startEdgeDrag(sh, i, w) {
+  const P = sh.pts, n = P.length, a = P[i], b = P[(i + 1) % n];
+  const c = dist(a, b) || 1, d = {x: (b.x - a.x) / c, y: (b.y - a.y) / c}, nn = {x: -d.y, y: d.x};
+  const pa = P[(i - 1 + n) % n], nb = P[(i + 2) % n];
+  S.drag = {type: 'edge', sh, i, start: w, nn, a0: {x: a.x, y: a.y}, b0: {x: b.x, y: b.y}, dA: {x: a.x - pa.x, y: a.y - pa.y}, dB: {x: nb.x - b.x, y: nb.y - b.y}, pa: {x: pa.x, y: pa.y}, nb: {x: nb.x, y: nb.y}, moved: false, arc: !!a.b};
+}
+svg.addEventListener('pointermove', e => {
+  const p = evPos(e); lastMouse = p;
+  if (pointers.has(e.pointerId)) pointers.set(e.pointerId, p);
+  if (pinch && pointers.size === 2) {
+    const [a, b] = [...pointers.values()]; const d = Math.hypot(b.x - a.x, b.y - a.y), c = {x: (a.x + b.x) / 2, y: (a.y + b.y) / 2};
+    const s2 = Math.max(0.004, Math.min(8, pinch.s * d / pinch.d)); const wc = {x: (pinch.c.x - pinch.ox) / pinch.s, y: (pinch.c.y - pinch.oy) / pinch.s};
+    S.view.s = s2; S.view.ox = c.x - wc.x * s2; S.view.oy = c.y - wc.y * s2; render(); return;
+  }
+  const w = S2W(p.x, p.y); S.shiftDown = e.shiftKey;
+  $('xy').textContent = 'x ' + fmt(w.x) + ' · y ' + fmt(w.y) + ' мм';
+  const D = S.drag;
+  if (D) {
+    if (D.type === 'pan') { if (Math.hypot(p.x - D.sx, p.y - D.sy) > 3) D.click = false; S.view.ox = D.ox + p.x - D.sx; S.view.oy = D.oy + p.y - D.sy; render(); return; }
+    if (D.type === 'ul') { S.ul.x = D.x + (p.x - D.sx) / S.view.s; S.ul.y = D.y + (p.y - D.sy) / S.view.s; render(); return; }
+    if (D.type === 'rect') { S.rect.b = snapDraw(w, null, e.shiftKey); if (S.opt.ortho === !!e.shiftKey) { /* квадрат при Shift? нет */ } render(); return; }
+    if (D.type === 'vertex') {
+      const P = D.sh.pts, n = P.length, i = D.i;
+      const others = allVerts({id: D.sh.id, i});
+      const tol = SNAP_PX / S.view.s; S.guides = []; S.snapMark = null;
+      let q = {x: roundStep(w.x), y: roundStep(w.y)};
+      if (S.opt.snap && !e.shiftKey) {
+        let hit = others.find(v => dist(v, w) < tol);
+        if (hit) { q = {x: hit.x, y: hit.y}; S.snapMark = hit; }
+        else {
+          // «стянуть» угол: выровнять по соседям, чтобы стены стали ровно 0/90°
+          const nb = [P[(i - 1 + n) % n], P[(i + 1) % n]].concat(others);
+          let bx = null, by = null;
+          for (const v of nb) { if (Math.abs(v.x - w.x) < tol && (!bx || Math.abs(v.x - w.x) < Math.abs(bx.x - w.x))) bx = v; if (Math.abs(v.y - w.y) < tol && (!by || Math.abs(v.y - w.y) < Math.abs(by.y - w.y))) by = v; }
+          if (bx) { q.x = bx.x; S.guides.push([bx, q]); } if (by) { q.y = by.y; S.guides.push([by, q]); }
+        }
+      }
+      P[i].x = R2(q.x); P[i].y = R2(q.y); D.moved = true; render(); panelLive(); return;
+    }
+    if (D.type === 'edge') {
+      const P = D.sh.pts, n = P.length, i = D.i;
+      let off = (w.x - D.start.x) * D.nn.x + (w.y - D.start.y) * D.nn.y; off = roundStep(off);
+      const nA = {x: D.a0.x + D.nn.x * off, y: D.a0.y + D.nn.y * off}, nB = {x: D.b0.x + D.nn.x * off, y: D.b0.y + D.nn.y * off};
+      const ed = {x: D.b0.x - D.a0.x, y: D.b0.y - D.a0.y};
+      let A2 = n > 3 && !P[(i - 1 + n) % n].b ? lineInt(nA, ed, D.pa, D.dA) : null, B2 = n > 3 && !P[(i + 1) % n].b ? lineInt(nA, ed, D.nb, D.dB) : null;
+      if (!A2 || dist(A2, nA) > Math.abs(off) * 20 + 50) A2 = nA; if (!B2 || dist(B2, nB) > Math.abs(off) * 20 + 50) B2 = nB;
+      P[i].x = R2(A2.x); P[i].y = R2(A2.y); P[(i + 1) % n].x = R2(B2.x); P[(i + 1) % n].y = R2(B2.y);
+      D.moved = true; S.guides = []; render(); panelLive(); return;
+    }
+    if (D.type === 'bulge') {
+      const P = D.sh.pts, n = P.length, a = P[D.i], b = P[(D.i + 1) % n], c = dist(a, b);
+      const d = {x: (b.x - a.x) / c, y: (b.y - a.y) / c}, nn = {x: -d.y, y: d.x}, mid = {x: (a.x + b.x) / 2, y: (a.y + b.y) / 2};
+      let s = (w.x - mid.x) * nn.x + (w.y - mid.y) * nn.y;
+      if (Math.abs(s) * S.view.s < 6) { a.b = 0; }
+      else {
+        let bul = 2 * s / c; bul = Math.max(-2.5, Math.min(2.5, bul));
+        // округлим радиус до шага
+        const A = arcOf(a, b, bul); if (A && S.opt.step >= 5) { const R = Math.max(c / 2, roundStep(A.R)); bul = bulgeFromR(c, R, Math.sign(bul), Math.abs(bul) > 1); }
+        a.b = bul;
+      }
+      D.moved = true; render(); panelLive(); return;
+    }
+    if (D.type === 'move') {
+      let dx = roundStep(w.x - D.start.x), dy = roundStep(w.y - D.start.y);
+      // привязка точки фигуры к чужим углам
+      S.snapMark = null;
+      if (S.opt.snap && !e.shiftKey) {
+        const tol = SNAP_PX / S.view.s; const others = S.shapes.filter(s => s !== D.sh && !s.hidden).flatMap(s => s.pts);
+        outer: for (const o of D.orig) for (const v of others) { const q = {x: o.x + (w.x - D.start.x), y: o.y + (w.y - D.start.y)}; if (dist(q, v) < tol) { dx = v.x - o.x; dy = v.y - o.y; S.snapMark = v; break outer; } }
+      }
+      D.sh.pts.forEach((q, k) => { q.x = R2(D.orig[k].x + dx); q.y = R2(D.orig[k].y + dy); });
+      D.moved = D.moved || Math.abs(dx) + Math.abs(dy) > 0; render(); return;
+    }
+    return;
+  }
+  // без перетаскивания
+  if (S.tool === 'walls') { const P = S.draw ? S.draw.pts : []; S.cursor = snapDraw(w, P.length ? P[P.length - 1] : null, e.shiftKey, P.length ? [P[0]] : []); render(); return; }
+  if (S.tool === 'rect') { S.cursor = snapDraw(w, null, e.shiftKey); render(); return; }
+  if (S.tool === 'knife' || S.tool === 'measure') { const key = S.tool === 'knife' ? 'knife' : 'meas'; const k = S[key]; S.cursor = snapDraw(w, k && k.a && !k.b ? k.a : null, e.shiftKey); render(); return; }
+  if (S.tool === 'calib') { S.cursor = w; render(); return; }
+  if (S.tool === 'select' || S.tool === 'arc') {
+    const h = hitTest(p.x, p.y);
+    const key = h ? h.type + (h.sh ? h.sh.id : '') + (h.i !== undefined ? h.i : '') : '';
+    const pk = S.hover ? S.hover.type + (S.hover.sh ? S.hover.sh.id : '') + (S.hover.i !== undefined ? S.hover.i : '') : '';
+    if (key !== pk) { S.hover = (S.tool === 'arc' && h && h.type === 'shape') ? null : h; render(); }
+    svg.style.cursor = !h ? 'default' : h.type === 'vertex' ? 'move' : h.type === 'mid' ? 'ew-resize' : h.type === 'edge' ? (S.tool === 'arc' ? 'ew-resize' : 'grab') : 'pointer';
+  }
+});
+function endPointer(e) {
+  pointers.delete(e.pointerId); if (pointers.size < 2) pinch = null;
+  const D = S.drag; S.drag = null;
+  if (!D) return;
+  if (D.type === 'rect') {
+    const a = S.rect.a, b = S.rect.b; S.rect = null;
+    if (a && b && Math.abs(b.x - a.x) >= 100 && Math.abs(b.y - a.y) >= 100) addShape(rectPts(Math.min(a.x, b.x), Math.min(a.y, b.y), Math.abs(b.x - a.x), Math.abs(b.y - a.y)), S.drawKind);
+    else { S.rect = {a, b: null}; render(); }
+    return;
+  }
+  if (D.type === 'ul') { autosave(); return; }
+  if (D.type === 'pan') { autosave(); return; }
+  S.guides = []; S.snapMark = null;
+  if (D.moved) { if (D.sh) D.sh.pts = cleanPts(D.sh.pts, 0.5); if (S.selV >= (D.sh ? D.sh.pts.length : 0)) S.selV = -1; commit(); }
+  render(); panel();
+}
+svg.addEventListener('pointerup', endPointer);
+svg.addEventListener('pointercancel', endPointer);
+svg.addEventListener('pointerleave', () => { if (!S.drag && S.hover) { S.hover = null; render(); } });
+svg.addEventListener('wheel', e => { e.preventDefault(); const p = evPos(e); const f = Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0015)); zoomAt(f, p.x, p.y); }, {passive: false});
+svg.addEventListener('dblclick', e => {
+  const p = evPos(e);
+  if (S.tool === 'walls') { if (S.draw && S.draw.pts.length >= 3) { // двойной клик добавил лишнюю точку
+      const P = S.draw.pts; if (P.length > 3 && dist(P[P.length - 1], P[P.length - 2]) < 1) P.pop(); finishDraw(); } return; }
+  if (S.tool !== 'select') return;
+  const h = hitTest(p.x, p.y);
+  if (h && h.type === 'edge') { const ni = insertVertex(h.sh, h.i, S2W(p.x, p.y)); S.sel = h.sh.id; S.selV = ni; S.selE = -1; commit(); render(); panel(); }
+});
+svg.addEventListener('contextmenu', e => {
+  e.preventDefault(); if (S.tool === 'walls' && S.draw) { finishDraw(); return; }
+  const p = evPos(e); const h = hitTest(p.x, p.y); if (!h) return;
+  S.sel = h.sh.id; if (h.type === 'vertex') { S.selV = h.i; S.selE = -1; } else if (h.type === 'edge' || h.type === 'mid') { S.selE = h.i; S.selV = -1; } else { S.selV = S.selE = -1; }
+  render(); panel(); showCtx(p, h);
+});
+
+/* ---------------- контекстное меню ---------------- */
+const ctx = $('ctx');
+function hideCtx() { ctx.style.display = 'none'; }
+function showCtx(p, h) {
+  const sh = h.sh; const items = [];
+  if (h.type === 'vertex') {
+    items.push(['Скруглить угол радиусом…', () => askNumber('Скругление угла', 'Радиус скругления, мм', 500, v => { if (filletVertex(sh, h.i, v)) { S.selV = -1; commit(); render(); panel(); } })]);
+    items.push(['Срезать угол (фаска)…', () => askNumber('Фаска', 'Сколько срезать по каждой стене, мм', 300, v => { if (filletVertex(sh, h.i, v, true)) { S.selV = -1; commit(); render(); panel(); } })]);
+    items.push(['Задать угол…', () => askNumber('Угол в этой точке', 'Внутренний угол, градусы', Math.round(interiorAngle(sh, h.i) * 10) / 10, v => { setInteriorAngle(sh, h.i, v); commit(); render(); panel(); }, null, '°')]);
+    items.push(null);
+    items.push(['Удалить точку', () => delVertex(sh, h.i), 'dg']);
+  } else if (h.type === 'edge' || h.type === 'mid') {
+    const a = sh.pts[h.i];
+    items.push(['Длина стены…', () => askNumber('Длина стены', 'Длина, мм', Math.round(edgeLen(sh, h.i)), v => { setEdgeLength(sh, h.i, v); commit(); render(); panel(); })]);
+    items.push([a.b ? 'Сделать прямой' : 'Сделать дугой (радиус)…', () => { if (a.b) { a.b = 0; commit(); render(); panel(); } else askNumber('Радиусная стена', 'Радиус, мм (не меньше ' + fmt(dist(a, sh.pts[(h.i + 1) % sh.pts.length]) / 2) + ')', Math.round(dist(a, sh.pts[(h.i + 1) % sh.pts.length])), v => { setRadius(sh, h.i, v); commit(); render(); panel(); }); }]);
+    if (a.b) items.push(['Выгнуть в другую сторону', () => { a.b = -a.b; commit(); render(); panel(); }]);
+    items.push(['Добавить точку посередине', () => { S.selV = insertVertex(sh, h.i); commit(); render(); panel(); }]);
+  }
+  items.push(null);
+  items.push(['Переименовать', () => { document.body.classList.add('side-open'); const i = $('pName'); if (i) { i.focus(); i.select(); } }]);
+  items.push(['Дублировать', () => dupShape(sh)]);
+  items.push(['Повернуть на 90°', () => { rotate90(sh); commit(); render(); panel(); }]);
+  items.push(['Отразить зеркально', () => { mirror(sh); commit(); render(); panel(); }]);
+  items.push(['Выровнять углы до 90°', () => { orthogonalize(sh); commit(); render(); panel(); }]);
+  items.push(null);
+  items.push(['Удалить «' + sh.name + '»', () => delShape(sh.id), 'dg']);
+  ctx.innerHTML = '';
+  items.forEach(it => { if (!it) { ctx.appendChild(document.createElement('hr')); return; } const b = document.createElement('button'); b.textContent = it[0]; if (it[2]) b.className = it[2]; b.onclick = () => { hideCtx(); it[1](); }; ctx.appendChild(b); });
+  ctx.style.display = 'block';
+  const {w, h: hh} = stageSize(); const r = ctx.getBoundingClientRect();
+  ctx.style.left = Math.min(p.x, w - r.width - 8) + 'px'; ctx.style.top = Math.min(p.y, hh - r.height - 8) + 'px';
+}
+document.addEventListener('pointerdown', e => { if (!ctx.contains(e.target) && e.target !== svg) hideCtx(); });
+function delVertex(sh, i) { if (sh.pts.length <= 3) { toast('У помещения должно быть минимум 3 угла', true); return; } sh.pts.splice(i, 1); S.selV = -1; commit(); render(); panel(); }
+function delShape(id) { S.shapes = S.shapes.filter(s => s.id !== id); if (S.sel === id) S.sel = null; S.multi = S.multi.filter(x => x !== id); commit(); render(); panel(); }
+function dupShape(sh) { const bb = bboxOf(flatten(sh, 30)); const c = JSON.parse(JSON.stringify(sh)); c.id = uid(); c.name = sh.name + ' копия'; c.pts.forEach(p => { p.x += roundStep(bb.w + 500); }); S.shapes.push(c); S.sel = c.id; commit(); render(); panel(); }
+
+/* ---------------- клавиатура ---------------- */
+document.addEventListener('keydown', e => {
+  const tag = (e.target.tagName || '').toLowerCase();
+  if (tag === 'input' || tag === 'select' || tag === 'textarea') return;
+  if (document.querySelector('.modal.open')) return;
+  const k = e.key;
+  if ((e.ctrlKey || e.metaKey) && (k === 'z' || k === 'я')) { e.preventDefault(); if (e.shiftKey) redo(); else undo(); return; }
+  if ((e.ctrlKey || e.metaKey) && (k === 'y' || k === 'н')) { e.preventDefault(); redo(); return; }
+  if ((e.ctrlKey || e.metaKey) && (k === 's' || k === 'ы')) { e.preventDefault(); saveJson(); return; }
+  if ((e.ctrlKey || e.metaKey) && (k === 'd' || k === 'в')) { e.preventDefault(); const s = cur(); if (s) dupShape(s); return; }
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  if (k === ' ') { spaceDown = true; svg.style.cursor = 'grab'; e.preventDefault(); return; }
+  if ((S.tool === 'walls' && S.draw && S.draw.pts.length) || S.tool === 'rect') {
+    if (/^[0-9]$/.test(k)) { e.preventDefault(); hudOpen(k); return; }
+  }
+  if (k === 'Escape') {
+    if (S.draw) { S.draw = null; S.cursor = null; render(); return; }
+    if (S.rect || S.knife || S.meas || S.calib) { S.rect = S.knife = S.meas = S.calib = null; render(); return; }
+    if (S.tool !== 'select') { setTool('select'); return; }
+    S.sel = null; S.selV = S.selE = -1; S.multi = []; render(); panel(); return;
+  }
+  if (k === 'Enter' && S.tool === 'walls' && S.draw) { e.preventDefault(); finishDraw(); return; }
+  if (k === 'Backspace' && S.tool === 'walls' && S.draw) { e.preventDefault(); S.draw.pts.pop(); if (!S.draw.pts.length) S.draw = null; render(); return; }
+  if (k === 'Delete' || k === 'Backspace') { const s = cur(); if (!s) return; e.preventDefault(); if (S.selV >= 0) delVertex(s, S.selV); else delShape(s.id); return; }
+  if (k === 'Home') { fitAll(); return; }
+  if (k === 'F8') { e.preventDefault(); S.opt.ortho = !S.opt.ortho; syncStatus(); return; }
+  if (k.startsWith('Arrow')) {
+    const s = cur(); if (!s) return; e.preventDefault(); const st = e.shiftKey ? S.opt.step * 10 : S.opt.step;
+    const dx = k === 'ArrowLeft' ? -st : k === 'ArrowRight' ? st : 0, dy = k === 'ArrowUp' ? -st : k === 'ArrowDown' ? st : 0;
+    const tgt = S.selV >= 0 ? [s.pts[S.selV]] : s.pts; tgt.forEach(p => { p.x = R2(p.x + dx); p.y = R2(p.y + dy); }); commit(); render(); panel(); return;
+  }
+  const map = {v: 'select', 'м': 'select', w: 'walls', 'ц': 'walls', r: 'rect', 'к': 'rect', a: 'arc', 'ф': 'arc', k: 'knife', 'л': 'knife', m: 'measure', 'ь': 'measure', f: 'wand', 'а': 'wand', h: 'pan', 'р': 'pan'};
+  const t = map[k.toLowerCase()]; if (t) { setTool(t); e.preventDefault(); }
+});
+document.addEventListener('keyup', e => { if (e.key === ' ') { spaceDown = false; svg.style.cursor = ''; } });
+
+/* ---------------- инструменты ---------------- */
+function setTool(t) {
+  if (S.tool === 'walls' && t !== 'walls' && S.draw && S.draw.pts.length >= 3) finishDraw();
+  S.tool = t; S.draw = t === 'walls' ? S.draw : null; S.rect = null; S.knife = null; S.meas = t === 'measure' ? S.meas : null; S.calib = null; S.cursor = null; S.guides = []; S.snapMark = null; S.hover = null;
+  document.querySelectorAll('.tool').forEach(b => b.classList.toggle('on', b.dataset.tool === t));
+  $('bUlMove').classList.toggle('pr', t === 'ulmove');
+  svg.style.cursor = (t === 'walls' || t === 'rect' || t === 'knife' || t === 'measure' || t === 'calib' || t === 'wand') ? 'crosshair' : t === 'pan' || t === 'ulmove' ? 'grab' : 'default';
+  $('kindChip').style.display = (t === 'walls' || t === 'rect') ? '' : 'none';
+  hudClose(); render();
+}
+document.querySelectorAll('.tool').forEach(b => b.addEventListener('click', () => setTool(b.dataset.tool)));
+document.querySelectorAll('#kindSeg button').forEach(b => b.addEventListener('click', () => { S.drawKind = b.dataset.kind; document.querySelectorAll('#kindSeg button').forEach(x => x.classList.toggle('on', x === b)); }));
+
+/* ---------------- панель ---------------- */
+function panel() {
+  const ul = $('rooms'); $('roomCnt').textContent = S.shapes.length;
+  if (!S.shapes.length) ul.innerHTML = '<li class="empty" style="border:none;cursor:default;padding:2px 0">Пока пусто. Нарисуйте стены (W), прямоугольник (R) или выберите шаблон.</li>';
+  else ul.innerHTML = S.shapes.map(s => { const ar = shArea(s); return '<li data-id="' + s.id + '" class="' + (s.id === S.sel && !S.multi.length ? 'on' : '') + (S.multi.includes(s.id) ? ' multi' : '') + '"><span class="dot" style="background:' + KIND[s.kind].dot + '"></span><span class="nm" title="Двойной клик — переименовать">' + esc(s.name) + '</span><span class="ar">' + fmtA(ar) + ' м²</span><button class="x" data-del="' + s.id + '" title="Удалить">✕</button></li>'; }).join('');
+  ul.querySelectorAll('li[data-id]').forEach(li => {
+    li.onclick = e => {
+      if (e.target.dataset.del) { delShape(e.target.dataset.del); return; }
+      const id = li.dataset.id;
+      if (e.shiftKey) { if (!S.multi.length && S.sel && S.sel !== id) S.multi.push(S.sel); const k = S.multi.indexOf(id); if (k >= 0) S.multi.splice(k, 1); else S.multi.push(id); }
+      else { S.multi = []; S.sel = id; S.selV = S.selE = -1; }
+      render(); panel();
+    };
+    li.ondblclick = () => { S.sel = li.dataset.id; S.multi = []; panel(); render(); const i = $('pName'); if (i) { i.focus(); i.select(); } };
+  });
+  $('bUnion').disabled = S.multi.length < 2; $('bSub').disabled = S.multi.length < 2;
+  const embedRooms = S.shapes.filter(s => s.kind !== 'cut').length;
+  $('bApply').disabled = !cur() && embedRooms !== 1;
+  $('bApplyAll').style.display = S.embed && embedRooms > 1 ? '' : 'none';
+  props();
+}
+function props() {
+  const box = $('propSec'); const sh = cur();
+  if (S.multi.length >= 2) { box.innerHTML = '<h3>Выделено: ' + S.multi.length + '</h3><div class="note" style="margin:0">«Объединить» — склеить в одно помещение. «Вычесть» — из первого выделенного убрать остальные (ниша, колонна, короб).</div>'; return; }
+  if (!sh) { box.innerHTML = '<h3>Свойства</h3><div class="empty">Выберите помещение на чертеже или в списке.</div>'; return; }
+  const poly = flatten(sh, 2), ar = shArea(sh), bb = bboxOf(poly), per = perimeter(sh);
+  const bad = selfIntersects(poly);
+  let h = '<h3>' + esc(KIND[sh.kind].name) + '</h3>';
+  h += '<div class="fld"><label>Название</label><input type="text" id="pName" value="' + esc(sh.name) + '"></div>';
+  h += '<div class="fld"><label>Тип</label><select id="pKind"><option value="room">Помещение</option><option value="zone">Зона</option><option value="cut">Колонна / вырез</option></select></div>';
+  h += '<div class="kv" id="pKv"><span>Площадь</span><b>' + fmtA(ar) + ' м²</b><span>Периметр</span><b>' + fmt(per) + ' мм</b><span>Габариты</span><b>' + fmt(bb.w) + ' × ' + fmt(bb.h) + ' мм</b><span>Углов</span><b>' + sh.pts.length + '</b></div>';
+  if (bad) h += '<div class="warn">Стены пересекаются — проверьте контур.</div>';
+  h += '<table class="walls"><thead><tr><th>№</th><th>Длина, мм</th><th>Радиус</th><th>Угол</th></tr></thead><tbody>';
+  for (let i = 0; i < sh.pts.length; i++) {
+    const a = sh.pts[i], A = arcOf(a, sh.pts[(i + 1) % sh.pts.length], a.b), ang = interiorAngle(sh, i);
+    h += '<tr data-i="' + i + '"' + (i === S.selE || i === S.selV ? ' class="hl"' : '') + '><td class="n">' + (i + 1) + '</td>' +
+      '<td><input data-f="len" data-i="' + i + '" value="' + Math.round(A ? A.len : dist(a, sh.pts[(i + 1) % sh.pts.length])) + '"></td>' +
+      '<td><input data-f="r" data-i="' + i + '" value="' + (A ? Math.round(A.R) : '') + '" placeholder="—"></td>' +
+      '<td><input data-f="ang" data-i="' + i + '" value="' + (Math.round(ang * 10) / 10).toString().replace('.', ',') + '°"></td></tr>';
+  }
+  h += '</tbody></table><div class="note">Угол — внутренний, в начале стены. Изменение длины сдвигает следующую стену параллельно.</div>';
+  if (S.selV >= 0) {
+    h += '<div class="vbox"><b>Точка ' + (S.selV + 1) + '</b><div class="row"><input type="number" id="vR" value="500" min="10" step="10"><span>мм</span><button class="tb" id="vFil">Скруглить</button><button class="tb" id="vCh">Фаска</button></div><div class="row"><button class="tb" id="vDel">Удалить точку</button></div></div>';
+  }
+  h += '<div class="btns"><button class="tb" id="pOrtho">Углы до 90°</button><button class="tb" id="pRot">Повернуть 90°</button><button class="tb" id="pMir">Отразить</button><button class="tb" id="pDup">Дублировать</button></div>';
+  box.innerHTML = h;
+  $('pKind').value = sh.kind;
+  $('pName').onchange = e => { sh.name = e.target.value.trim() || sh.name; commit(); render(); panel(); };
+  $('pKind').onchange = e => { sh.kind = e.target.value; commit(); render(); panel(); };
+  box.querySelectorAll('table.walls input').forEach(inp => {
+    inp.onfocus = () => { S.selE = +inp.dataset.i; S.selV = -1; render(); box.querySelectorAll('tr').forEach(tr => tr.classList.toggle('hl', tr.dataset.i == inp.dataset.i)); inp.select(); };
+    inp.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); inp.blur(); } };
+    inp.onchange = () => {
+      const i = +inp.dataset.i, v = parseNum(inp.value);
+      if (inp.dataset.f === 'len') { if (v > 0) setEdgeLength(sh, i, v); }
+      else if (inp.dataset.f === 'r') { setRadius(sh, i, inp.value.trim() === '' ? 0 : v); }
+      else if (inp.dataset.f === 'ang') { if (v > 0 && v < 360) setInteriorAngle(sh, i, v); }
+      commit(); render(); panel();
+    };
+  });
+  if ($('vFil')) {
+    $('vFil').onclick = () => { if (filletVertex(sh, S.selV, parseNum($('vR').value))) { S.selV = -1; commit(); render(); panel(); } };
+    $('vCh').onclick = () => { if (filletVertex(sh, S.selV, parseNum($('vR').value), true)) { S.selV = -1; commit(); render(); panel(); } };
+    $('vDel').onclick = () => delVertex(sh, S.selV);
+  }
+  $('pOrtho').onclick = () => { orthogonalize(sh); commit(); render(); panel(); };
+  $('pRot').onclick = () => { rotate90(sh); commit(); render(); panel(); };
+  $('pMir').onclick = () => { mirror(sh); commit(); render(); panel(); };
+  $('pDup').onclick = () => dupShape(sh);
+}
+let liveT = null;
+function panelLive() { if (liveT) return; liveT = requestAnimationFrame(() => { liveT = null; const sh = cur(); if (!sh) return; const kv = $('pKv'); if (!kv) return; const poly = flatten(sh, 2), bb = bboxOf(poly); kv.innerHTML = '<span>Площадь</span><b>' + fmtA(shArea(sh)) + ' м²</b><span>Периметр</span><b>' + fmt(perimeter(sh)) + ' мм</b><span>Габариты</span><b>' + fmt(bb.w) + ' × ' + fmt(bb.h) + ' мм</b><span>Углов</span><b>' + sh.pts.length + '</b>'; }); }
+
+/* ---------------- статус-бар ---------------- */
+function syncStatus() {
+  $('tOrtho').classList.toggle('on', S.opt.ortho); $('tSnap').classList.toggle('on', S.opt.snap); $('tGrid').classList.toggle('on', S.opt.grid); $('tAngles').classList.toggle('on', S.opt.allAngles);
+  $('step').value = String(S.opt.step); render(); autosave();
+}
+$('tOrtho').onclick = () => { S.opt.ortho = !S.opt.ortho; syncStatus(); };
+$('tSnap').onclick = () => { S.opt.snap = !S.opt.snap; syncStatus(); };
+$('tGrid').onclick = () => { S.opt.grid = !S.opt.grid; syncStatus(); };
+$('tAngles').onclick = () => { S.opt.allAngles = !S.opt.allAngles; syncStatus(); };
+$('step').onchange = e => { S.opt.step = +e.target.value; syncStatus(); };
+
+/* ---------------- окна ---------------- */
+document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => b.closest('.modal').classList.remove('open'));
+document.querySelectorAll('.modal').forEach(m => m.addEventListener('pointerdown', e => { if (e.target === m) m.classList.remove('open'); }));
+let askCb = null, askCancel = null;
+function askNumber(title, note, def, cb, onCancel, unit) {
+  $('askT').textContent = title; $('askN').textContent = note; $('askIn').value = def; $('askU').textContent = unit || 'мм';
+  askCb = cb; askCancel = onCancel || null; $('mAsk').classList.add('open'); setTimeout(() => { $('askIn').focus(); $('askIn').select(); }, 30);
+}
+$('askOk').onclick = () => { const v = parseNum($('askIn').value); $('mAsk').classList.remove('open'); if (v > 0 && askCb) askCb(v); askCb = null; };
+$('askIn').addEventListener('keydown', e => { if (e.key === 'Enter') $('askOk').click(); if (e.key === 'Escape') { $('mAsk').classList.remove('open'); if (askCancel) askCancel(); } });
+$('mAsk').querySelector('[data-close]').addEventListener('click', () => { if (askCancel) askCancel(); });
+
+/* шаблоны */
+const TPL = [
+  {id: 'rect', name: 'Прямоугольник', p: [['L', 'Длина', 5000], ['W', 'Ширина', 4000]], make: v => rectPts(0, 0, v.L, v.W)},
+  {id: 'L', name: 'Г-образное', p: [['L', 'Длина', 6000], ['W', 'Ширина', 5000], ['a', 'Вырез по длине', 2500], ['b', 'Вырез по ширине', 2000]], make: v => [{x: 0, y: 0}, {x: v.L - v.a, y: 0}, {x: v.L - v.a, y: v.b}, {x: v.L, y: v.b}, {x: v.L, y: v.W}, {x: 0, y: v.W}]},
+  {id: 'U', name: 'П-образное', p: [['L', 'Длина', 7000], ['W', 'Ширина', 5000], ['a', 'Ширина выреза', 3000], ['b', 'Глубина выреза', 2000]], make: v => { const x0 = (v.L - v.a) / 2; return [{x: 0, y: 0}, {x: x0, y: 0}, {x: x0, y: v.b}, {x: x0 + v.a, y: v.b}, {x: x0 + v.a, y: 0}, {x: v.L, y: 0}, {x: v.L, y: v.W}, {x: 0, y: v.W}]; }},
+  {id: 'T', name: 'Т-образное', p: [['L', 'Ширина верха', 7000], ['a', 'Глубина верха', 2500], ['b', 'Ширина низа', 3000], ['W', 'Общая глубина', 6000]], make: v => { const x0 = (v.L - v.b) / 2; return [{x: 0, y: 0}, {x: v.L, y: 0}, {x: v.L, y: v.a}, {x: x0 + v.b, y: v.a}, {x: x0 + v.b, y: v.W}, {x: x0, y: v.W}, {x: x0, y: v.a}, {x: 0, y: v.a}]; }},
+  {id: 'trap', name: 'Трапеция', p: [['L', 'Низ', 6000], ['a', 'Верх', 4000], ['W', 'Высота', 4000], ['b', 'Сдвиг верха', 0]], make: v => { const x0 = (v.L - v.a) / 2 + v.b; return [{x: x0, y: 0}, {x: x0 + v.a, y: 0}, {x: v.L, y: v.W}, {x: 0, y: v.W}]; }},
+  {id: 'cham', name: 'Скошенный угол', p: [['L', 'Длина', 5000], ['W', 'Ширина', 4000], ['a', 'Срез по длине', 1500], ['b', 'Срез по ширине', 1500]], make: v => [{x: 0, y: 0}, {x: v.L - v.a, y: 0}, {x: v.L, y: v.b}, {x: v.L, y: v.W}, {x: 0, y: v.W}]},
+  {id: 'bay', name: 'С эркером', p: [['L', 'Длина', 6000], ['W', 'Ширина', 4000], ['a', 'Ширина эркера', 3000], ['b', 'Глубина эркера', 1000]], make: v => { const x0 = (v.L - v.a) / 2; const bul = v.a > 0 ? -2 * v.b / v.a : 0; return [{x: 0, y: 0}, {x: v.L, y: 0}, {x: v.L, y: v.W}, {x: x0 + v.a, y: v.W, b: bul}, {x: x0, y: v.W}, {x: 0, y: v.W}]; }},
+  {id: 'circle', name: 'Круг / овал', p: [['L', 'Диаметр', 4000]], make: v => [{x: 0, y: v.L / 2, b: 1}, {x: v.L, y: v.L / 2, b: 1}]}
+];
+let tplSel = 'rect';
+function tplIcon(t) {
+  const v = {}; t.p.forEach(p => v[p[0]] = p[2]); const sh = {pts: t.make(v).map(p => ({x: p.x, y: p.y, b: p.b || 0}))};
+  const f = flatten(sh, 30), bb = bboxOf(f), k = Math.min(52 / bb.w, 36 / bb.h);
+  return '<svg viewBox="0 0 58 42"><polygon points="' + f.map(p => ((p[0] - bb.x0) * k + (58 - bb.w * k) / 2).toFixed(1) + ',' + ((p[1] - bb.y0) * k + (42 - bb.h * k) / 2).toFixed(1)).join(' ') + '" fill="rgba(192,0,0,.08)" stroke="#1a1a2e" stroke-width="1.6"/></svg>';
+}
+function openTpl() {
+  $('tplGrid').innerHTML = TPL.map(t => '<button class="tpl' + (t.id === tplSel ? ' on' : '') + '" data-t="' + t.id + '">' + tplIcon(t) + t.name + '</button>').join('');
+  $('tplGrid').querySelectorAll('.tpl').forEach(b => b.onclick = () => { tplSel = b.dataset.t; openTpl(); });
+  const t = TPL.find(x => x.id === tplSel);
+  $('tplParams').innerHTML = t.p.map(p => '<div class="fld"><label>' + p[1] + '</label><input type="number" data-k="' + p[0] + '" value="' + p[2] + '" step="10"></div>').join('');
+  $('mTpl').classList.add('open');
+}
+$('bTpl').onclick = openTpl;
+$('tplOk').onclick = () => {
+  const t = TPL.find(x => x.id === tplSel); const v = {};
+  $('tplParams').querySelectorAll('input').forEach(i => v[i.dataset.k] = parseNum(i.value) || 0);
+  let pts = t.make(v).map(p => ({x: p.x, y: p.y, b: p.b || 0}));
+  // ставим справа от существующих
+  let ox = 0; if (S.shapes.length) { const all = S.shapes.flatMap(s => flatten(s, 50)); const bb = bboxOf(all); ox = roundStep(bb.x1 + 1000); pts.forEach(p => { p.x += ox; p.y += roundStep(bb.y0); }); }
+  $('mTpl').classList.remove('open');
+  const sh = addShape(pts, 'room', null);
+  if (sh && t.id !== 'rect') sh.name = sh.name; fitAll();
+};
+
+/* по замерам */
+function msRow(len, turn) {
+  const d = document.createElement('div'); d.className = 'ms-row';
+  d.innerHTML = '<span class="n"></span><input type="number" class="ml" placeholder="длина, мм" value="' + (len || '') + '"><select><option value="R">затем направо</option><option value="L">затем налево</option></select><input type="number" class="ma" value="90" title="На сколько градусов поворот">' + '<button title="Удалить">✕</button>';
+  const sel = d.querySelector('select'); sel.value = turn || 'R';
+  sel.onchange = msCalc; d.querySelector('.ma').oninput = msCalc;
+  d.querySelector('input').oninput = msCalc;
+  d.querySelector('input').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); const rows = [...$('msRows').children]; const i = rows.indexOf(d); if (i === rows.length - 1) { $('msRows').appendChild(msRow('', 'R')); numberMs(); } $('msRows').children[i + 1].querySelector('input').focus(); } };
+  d.querySelector('button').onclick = () => { d.remove(); numberMs(); msCalc(); };
+  return d;
+}
+function numberMs() { [...$('msRows').children].forEach((r, i) => r.querySelector('.n').textContent = i + 1); }
+function msPts() {
+  let x = 0, y = 0, ang = 0; const pts = [{x: 0, y: 0, b: 0}];
+  for (const r of $('msRows').children) {
+    const L = parseNum(r.querySelector('input').value); if (!(L > 0)) continue;
+    x += Math.cos(ang) * L; y += Math.sin(ang) * L; pts.push({x: R2(x), y: R2(y), b: 0});
+    const t = r.querySelector('select').value, a = parseNum(r.querySelector('.ma').value); const turn = (isFinite(a) ? a : 90) * (t === 'L' ? -1 : 1);
+    ang += turn * Math.PI / 180;
+  }
+  return pts;
+}
+function msCalc() {
+  const pts = msPts(), res = $('msRes');
+  if (pts.length < 3) { res.className = 'ms-res'; res.textContent = 'Введите хотя бы две стены.'; return; }
+  const last = pts[pts.length - 1], gap = dist(last, pts[0]);
+  if (gap < 2) { res.className = 'ms-res ok'; res.textContent = 'Контур сходится. Площадь ' + fmtA(Math.abs(signedArea(pts.slice(0, -1).map(p => [p.x, p.y])))) + ' м².'; }
+  else { res.className = 'ms-res bad'; res.innerHTML = 'Невязка ' + fmt(gap) + ' мм: последняя стена замкнётся автоматически (' + fmt(gap) + ' мм). Если стены должны сходиться — проверьте замеры.'; }
+}
+$('bMeas').onclick = () => { const box = $('msRows'); box.innerHTML = ''; [[5000, 'R'], [4000, 'R'], [5000, 'R']].forEach(r => box.appendChild(msRow(r[0], r[1]))); numberMs(); msCalc(); $('mMeas').classList.add('open'); };
+$('msAdd').onclick = () => { $('msRows').appendChild(msRow('', 'R')); numberMs(); const r = $('msRows').lastChild; r.querySelector('input').focus(); };
+$('msOk').onclick = () => { let pts = msPts(); if (pts.length < 3) return; if (dist(pts[pts.length - 1], pts[0]) < 2) pts.pop(); $('mMeas').classList.remove('open'); if (S.shapes.length) { const bb = bboxOf(S.shapes.flatMap(s => flatten(s, 50))); pts.forEach(p => { p.x += roundStep(bb.x1 + 1000); p.y += roundStep(bb.y0); }); } addShape(pts, 'room'); fitAll(); };
+
+/* ---------------- подложка: картинка или PDF ---------------- */
+$('bPlan').onclick = () => $('fPlan').click();
+$('fPlan').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  try {
+    busy(true, 'Загружаю план…');
+    let src;
+    if (f.type === 'application/pdf' || /\.pdf$/i.test(f.name)) src = await pdfToImage(f);
+    else src = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(f); });
+    src = await shrinkImage(src, 3600);
+    const img = await loadImg(src);
+    // начальный масштаб: план ~ 12 м по большей стороне, если калибровки ещё нет
+    const k = 12000 / Math.max(img.width, img.height);
+    const c = S2W(stageSize().w / 2, stageSize().h / 2);
+    S.ul = {src, w: img.width, h: img.height, x: R2(c.x - img.width * k / 2), y: R2(c.y - img.height * k / 2), k, op: 60, calibrated: false};
+    procCache = null; busy(false); ulPanel(); fitAll(); autosave();
+    toast('План загружен. Задайте масштаб: «Задать масштаб» и две точки известного размера.');
+    setTool('calib');
+  } catch (err) { busy(false); console.error(err); toast('Не удалось открыть файл: ' + err.message, true); }
+};
+function loadImg(src) { return new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error('картинка не читается')); i.src = src; }); }
+async function shrinkImage(src, max) {
+  const img = await loadImg(src); if (Math.max(img.width, img.height) <= max && /^data:image\/(png|jpeg)/.test(src)) return src;
+  const k = Math.min(1, max / Math.max(img.width, img.height)); const c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+  const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height); return c.toDataURL('image/jpeg', 0.9);
+}
+async function pdfToImage(file) {
+  if (!window.pdfjsLib) throw new Error('не загрузился модуль PDF — проверьте интернет');
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  const buf = await file.arrayBuffer(); const pdf = await pdfjsLib.getDocument({data: buf}).promise;
+  let pn = 1; if (pdf.numPages > 1) { busy(false); const a = await new Promise(res => askNumber('Страница PDF', 'В файле ' + pdf.numPages + ' стр. Какую открыть?', 1, v => res(v), () => res(1), 'стр.')); busy(true, 'Загружаю план…'); pn = Math.max(1, Math.min(pdf.numPages, Math.round(a) || 1)); }
+  const page = await pdf.getPage(pn); const v0 = page.getViewport({scale: 1}); const sc = Math.min(4, 3200 / Math.max(v0.width, v0.height));
+  const vp = page.getViewport({scale: sc}); const c = document.createElement('canvas'); c.width = Math.round(vp.width); c.height = Math.round(vp.height);
+  const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+  await page.render({canvasContext: g, viewport: vp}).promise; return c.toDataURL('image/png');
+}
+function busy(on, t) { const b = $('busy'); if (t) b.textContent = t; b.style.display = on ? 'grid' : 'none'; }
+function ulPanel() {
+  const has = !!S.ul; $('ulInfo').style.display = has ? 'none' : ''; $('ulCtl').style.display = has ? '' : 'none';
+  if (!has) return; $('ulOp').value = S.ul.op; $('ulOpV').textContent = S.ul.op + '%';
+  $('ulScale').innerHTML = S.ul.calibrated ? '1 пиксель = ' + (Math.round(S.ul.k * 100) / 100).toString().replace('.', ',') + ' мм' : '<span style="color:#b45309">не задан</span>';
+}
+$('ulOp').oninput = e => { S.ul.op = +e.target.value; $('ulOpV').textContent = S.ul.op + '%'; render(); autosave(); };
+$('bCalib').onclick = () => setTool('calib');
+$('bUlMove').onclick = () => setTool(S.tool === 'ulmove' ? 'select' : 'ulmove');
+$('bUlDel').onclick = () => { S.ul = null; procCache = null; ulPanel(); render(); autosave(); };
+function calibrate(a, b, real) {
+  const cur = dist(a, b); if (!(cur > 0)) return; const r = real / cur;
+  // точка a остаётся на месте
+  S.ul.x = R2(a.x - (a.x - S.ul.x) * r); S.ul.y = R2(a.y - (a.y - S.ul.y) * r); S.ul.k *= r; S.ul.calibrated = true; procCache = null;
+  S.calib = null; ulPanel(); fitAll(); autosave(); setTool('select'); toast('Масштаб задан. Теперь можно «Найти все помещения» или обводить стены.');
+}
+$('wThr').oninput = e => { $('wThrV').textContent = e.target.value; procCache = null; };
+$('wGap').oninput = e => { $('wGapV').textContent = e.target.value + ' мм'; };
+$('bWand').onclick = () => setTool('wand');
+$('bAuto').onclick = () => autoRooms();
+
+/* ---------------- распознавание помещений на плане ---------------- */
+let procCache = null;
+async function getProc() {
+  if (procCache) return procCache;
+  const img = await loadImg(S.ul.src); const max = 2400; const k = Math.min(1, max / Math.max(img.width, img.height));
+  const w = Math.round(img.width * k), h = Math.round(img.height * k);
+  const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d', {willReadFrequently: true});
+  g.fillStyle = '#fff'; g.fillRect(0, 0, w, h); g.drawImage(img, 0, 0, w, h);
+  let data; try { data = g.getImageData(0, 0, w, h).data; } catch (e) { throw new Error('браузер не дал прочитать картинку'); }
+  const thr = +$('wThr').value; const wall = new Uint8Array(w * h);
+  for (let i = 0, j = 0; i < w * h; i++, j += 4) { const l = 0.299 * data[j] + 0.587 * data[j + 1] + 0.114 * data[j + 2]; wall[i] = l < thr ? 1 : 0; }
+  procCache = {w, h, wall, mmpx: S.ul.k * img.width / w, gapR: -1, dil: null};
+  return procCache;
+}
+function dilate(src, w, h, r) {
+  if (r <= 0) return src;
+  const tmp = new Uint8Array(w * h), out = new Uint8Array(w * h);
+  for (let y = 0; y < h; y++) { let cnt = 0; const o = y * w; for (let x = 0; x < Math.min(w, r); x++) cnt += src[o + x]; for (let x = 0; x < w; x++) { if (x + r < w) cnt += src[o + x + r]; if (x - r - 1 >= 0) cnt -= src[o + x - r - 1]; tmp[o + x] = cnt > 0 ? 1 : 0; } }
+  for (let x = 0; x < w; x++) { let cnt = 0; for (let y = 0; y < Math.min(h, r); y++) cnt += tmp[y * w + x]; for (let y = 0; y < h; y++) { if (y + r < h) cnt += tmp[(y + r) * w + x]; if (y - r - 1 >= 0) cnt -= tmp[(y - r - 1) * w + x]; out[y * w + x] = cnt > 0 ? 1 : 0; } }
+  return out;
+}
+function procDil(P) {
+  const r = Math.max(0, Math.round(+$('wGap').value / 2 / P.mmpx));
+  if (P.gapR !== r) { P.dil = dilate(P.wall, P.w, P.h, r); P.gapR = r; }
+  return {dil: P.dil, r};
+}
+function flood(block, w, h, sx, sy, lab, id) {
+  const st = [sy * w + sx]; let area = 0, border = false, x0 = sx, x1 = sx, y0 = sy, y1 = sy; lab[sy * w + sx] = id;
+  while (st.length) {
+    const i = st.pop(); area++; const x = i % w, y = (i / w) | 0;
+    if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+    if (x === 0 || y === 0 || x === w - 1 || y === h - 1) border = true;
+    if (x > 0 && !block[i - 1] && !lab[i - 1]) { lab[i - 1] = id; st.push(i - 1); }
+    if (x < w - 1 && !block[i + 1] && !lab[i + 1]) { lab[i + 1] = id; st.push(i + 1); }
+    if (y > 0 && !block[i - w] && !lab[i - w]) { lab[i - w] = id; st.push(i - w); }
+    if (y < h - 1 && !block[i + w] && !lab[i + w]) { lab[i + w] = id; st.push(i + w); }
+  }
+  return {area, border, x0, x1, y0, y1};
+}
+// дорастить область обратно до лица стены (на r пикселей, не заходя в стены)
+function growBack(lab, id, wall, w, h, r, bb) {
+  if (r <= 0) return;
+  let front = []; const X0 = Math.max(0, bb.x0 - r - 1), X1 = Math.min(w - 1, bb.x1 + r + 1), Y0 = Math.max(0, bb.y0 - r - 1), Y1 = Math.min(h - 1, bb.y1 + r + 1);
+  for (let y = Math.max(1, bb.y0); y <= Math.min(h - 2, bb.y1); y++) for (let x = Math.max(1, bb.x0); x <= Math.min(w - 2, bb.x1); x++) { const i = y * w + x; if (lab[i] === id && (lab[i - 1] !== id || lab[i + 1] !== id || lab[i - w] !== id || lab[i + w] !== id)) front.push(i); }
+  for (let k = 0; k < r && front.length; k++) {
+    const nf = [];
+    for (const i of front) { const x = i % w, y = (i / w) | 0; const l = x > X0, rr = x < X1, u = y > Y0, d = y < Y1; const nb = [l ? i - 1 : -1, rr ? i + 1 : -1, u ? i - w : -1, d ? i + w : -1, l && u ? i - w - 1 : -1, rr && u ? i - w + 1 : -1, l && d ? i + w - 1 : -1, rr && d ? i + w + 1 : -1]; for (const j of nb) if (j >= 0 && !lab[j] && !wall[j]) { lab[j] = id; nf.push(j); } }
+    front = nf;
+  }
+  bb.x0 = Math.max(0, bb.x0 - r); bb.y0 = Math.max(0, bb.y0 - r); bb.x1 = Math.min(w - 1, bb.x1 + r); bb.y1 = Math.min(h - 1, bb.y1 + r);
+}
+// контур области: обход по границам пикселей (точный, без дыр внутри)
+function traceOuter(lab, id, w, h, bb) {
+  const inR = (x, y) => x >= 0 && y >= 0 && x < w && y < h && lab[y * w + x] === id;
+  let sx = -1, sy = -1;
+  outer: for (let y = bb.y0; y <= bb.y1; y++) for (let x = bb.x0; x <= bb.x1; x++) if (inR(x, y)) { sx = x; sy = y; break outer; }
+  if (sx < 0) return [];
+  // идём по углам пикселей; направление: 0 вправо,1 вниз,2 влево,3 вверх; область справа от хода... используем правило «левой руки»
+  const pts = []; let x = sx, y = sy, d = 0; const DX = [1, 0, -1, 0], DY = [0, 1, 0, -1];
+  const startX = x, startY = y; let guard = 0;
+  do {
+    pts.push([x, y]);
+    // пиксели слева и справа от направления движения из угла (x,y)
+    // для направления d: левый пиксель и правый пиксель впереди
+    const L = d === 0 ? inR(x, y - 1) : d === 1 ? inR(x, y) : d === 2 ? inR(x - 1, y) : inR(x - 1, y - 1);
+    const Rr = d === 0 ? inR(x, y) : d === 1 ? inR(x - 1, y) : d === 2 ? inR(x - 1, y - 1) : inR(x, y - 1);
+    if (L) d = (d + 3) % 4; else if (!Rr) d = (d + 1) % 4;
+    else { x += DX[d]; y += DY[d]; }
+    if (++guard > 4e6) break;
+  } while (!(x === startX && y === startY && d === 0) || pts.length < 2);
+  // убрать повторяющиеся точки (на поворотах)
+  const out = []; for (const p of pts) { const l = out[out.length - 1]; if (!l || l[0] !== p[0] || l[1] !== p[1]) out.push(p); }
+  return out;
+}
+function dp(pts, eps) {
+  if (pts.length < 3) return pts;
+  const keep = new Uint8Array(pts.length); keep[0] = keep[pts.length - 1] = 1; const st = [[0, pts.length - 1]];
+  while (st.length) { const [a, b] = st.pop(); let md = 0, mi = -1; const A = {x: pts[a][0], y: pts[a][1]}, B = {x: pts[b][0], y: pts[b][1]}; for (let i = a + 1; i < b; i++) { const d = segDist({x: pts[i][0], y: pts[i][1]}, A, B).d; if (d > md) { md = d; mi = i; } } if (md > eps && mi > 0) { keep[mi] = 1; st.push([a, mi], [mi, b]); } }
+  return pts.filter((p, i) => keep[i]);
+}
+function simplifyClosed(pts, eps) {
+  if (pts.length < 4) return pts;
+  // делим по двум самым удалённым точкам
+  let far = 0, fd = 0; for (let i = 1; i < pts.length; i++) { const d = Math.hypot(pts[i][0] - pts[0][0], pts[i][1] - pts[0][1]); if (d > fd) { fd = d; far = i; } }
+  const a = dp(pts.slice(0, far + 1), eps), b = dp(pts.slice(far).concat([pts[0]]), eps);
+  return a.slice(0, -1).concat(b.slice(0, -1));
+}
+function orthoPoly(pts, tolDeg) {
+  // доминирующее направление (план может быть чуть повёрнут)
+  const n = pts.length; let hist = new Float64Array(90);
+  for (let i = 0; i < n; i++) { const a = pts[i], b = pts[(i + 1) % n]; const L = Math.hypot(b[0] - a[0], b[1] - a[1]); let ang = Math.atan2(b[1] - a[1], b[0] - a[0]) * 180 / Math.PI; ang = ((ang % 90) + 90) % 90; hist[Math.round(ang) % 90] += L; }
+  let best = 0; for (let i = 1; i < 90; i++) if (hist[i] > hist[best]) best = i; const th = best * Math.PI / 180;
+  const dirs = [0, 1, 2, 3].map(k => ({x: Math.cos(th + k * Math.PI / 2), y: Math.sin(th + k * Math.PI / 2)}));
+  let lines = [];
+  for (let i = 0; i < n; i++) {
+    const a = pts[i], b = pts[(i + 1) % n], L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (L < 0.5) continue;
+    const d = {x: (b[0] - a[0]) / L, y: (b[1] - a[1]) / L}; let dd = d;
+    for (const q of dirs) if (d.x * q.x + d.y * q.y > Math.cos(tolDeg * Math.PI / 180)) dd = q;
+    lines.push({m: {x: (a[0] + b[0]) / 2, y: (a[1] + b[1]) / 2}, d: dd, L, snapped: dd !== d});
+  }
+  // слить соседние линии одного направления
+  let merged = true;
+  while (merged && lines.length > 3) {
+    merged = false;
+    for (let i = 0; i < lines.length; i++) {
+      const A = lines[i], B = lines[(i + 1) % lines.length];
+      if (A.snapped && B.snapped && A.d === B.d) {
+        const off = Math.abs((B.m.x - A.m.x) * (-A.d.y) + (B.m.y - A.m.y) * A.d.x);
+        if (off < 3) { const L = A.L + B.L; A.m = {x: (A.m.x * A.L + B.m.x * B.L) / L, y: (A.m.y * A.L + B.m.y * B.L) / L}; A.L = L; lines.splice((i + 1) % lines.length, 1); merged = true; break; }
+      }
+    }
+  }
+  const out = [];
+  for (let i = 0; i < lines.length; i++) {
+    const A = lines[i], B = lines[(i + 1) % lines.length];
+    const q = lineInt(A.m, A.d, B.m, B.d);
+    if (q && Math.abs(A.d.x * B.d.y - A.d.y * B.d.x) > 0.05) out.push([q.x, q.y]);
+    else { // параллельны — ступенька
+      const pa = {x: A.m.x + A.d.x * A.L / 2, y: A.m.y + A.d.y * A.L / 2}; const t = (pa.x - B.m.x) * B.d.x + (pa.y - B.m.y) * B.d.y;
+      out.push([pa.x, pa.y]); out.push([B.m.x + B.d.x * t, B.m.y + B.d.y * t]);
+    }
+  }
+  return out;
+}
+function regionToShape(P, lab, id, bb, r) {
+  growBack(lab, id, P.wall, P.w, P.h, r, bb);
+  let c = traceOuter(lab, id, P.w, P.h, bb); if (c.length < 4) return null;
+  c = simplifyClosed(c, 1.6);
+  if ($('wOrtho').checked) c = orthoPoly(c, 9);
+  c = simplifyClosed(c, 0.8);
+  if (c.length < 3) return null;
+  const k = P.mmpx, st = Math.max(5, S.opt.step);
+  let pts = c.map(p => ({x: Math.round((S.ul.x + p[0] * k) / st) * st, y: Math.round((S.ul.y + p[1] * k) / st) * st, b: 0}));
+  pts = cleanPts(pts, st * 0.9);
+  if (pts.length < 3) return null;
+  return pts;
+}
+async function wandAt(w) {
+  if (!S.ul.calibrated) toast('Масштаб плана не задан — размеры будут примерными');
+  busy(true, 'Ищу контур…'); await new Promise(r => setTimeout(r, 20));
+  try {
+    const P = await getProc(); const {dil, r} = procDil(P);
+    const px = Math.floor((w.x - S.ul.x) / P.mmpx), py = Math.floor((w.y - S.ul.y) / P.mmpx);
+    if (px < 0 || py < 0 || px >= P.w || py >= P.h) { busy(false); toast('Кликните внутри плана', true); return; }
+    if (dil[py * P.w + px]) { busy(false); toast('Это стена или слишком узко. Кликните в середину комнаты или уменьшите «Проёмы до»', true); return; }
+    const lab = new Int32Array(P.w * P.h); const info = flood(dil, P.w, P.h, px, py, lab, 1);
+    if (info.border) { busy(false); toast('Контур не замкнут — комната «вытекает» наружу. Увеличьте «Проёмы до» или «Стены темнее»', true); return; }
+    const pts = regionToShape(P, lab, 1, info, r); busy(false);
+    if (!pts) { toast('Не получилось найти контур', true); return; }
+    addShape(pts, 'room');
+    toast('Помещение найдено: ' + fmtA(Math.abs(signedArea(pts.map(p => [p.x, p.y])))) + ' м²');
+  } catch (e) { busy(false); toast('Ошибка распознавания: ' + e.message, true); }
+}
+async function autoRooms() {
+  if (!S.ul) { toast('Сначала загрузите проект', true); return; }
+  if (!S.ul.calibrated) { toast('Сначала задайте масштаб плана', true); setTool('calib'); return; }
+  busy(true, 'Ищу помещения на плане…'); await new Promise(r => setTimeout(r, 30));
+  try {
+    const P = await getProc(); const {dil, r} = procDil(P); const W = P.w, H = P.h;
+    const lab = new Int32Array(W * H); let id = 0; const found = [];
+    const minA = 1.2e6 / (P.mmpx * P.mmpx), maxA = W * H * 0.6;
+    for (let y = 1; y < H - 1; y += 2) for (let x = 1; x < W - 1; x += 2) {
+      const i = y * W + x; if (dil[i] || lab[i]) continue;
+      id++; const info = flood(dil, W, H, x, y, lab, id);
+      if (!info.border && info.area >= minA && info.area <= maxA) found.push({id, info});
+    }
+    let n = 0; const made = [];
+    for (const f of found) { const pts = regionToShape(P, lab, f.id, f.info, r); if (!pts) continue; const ar = Math.abs(signedArea(pts.map(p => [p.x, p.y]))); if (ar < 1e6) continue; made.push(pts); }
+    made.forEach(pts => { const sh = {id: uid(), name: nextName('room'), kind: 'room', pts, hidden: false}; S.shapes.push(sh); n++; });
+    busy(false);
+    if (n) { S.sel = null; commit(); render(); panel(); toast('Найдено помещений: ' + n + '. Проверьте и поправьте контуры при необходимости.'); }
+    else toast('Помещения не найдены. Попробуйте изменить «Стены темнее» или «Проёмы до»', true);
+  } catch (e) { busy(false); console.error(e); toast('Ошибка распознавания: ' + e.message, true); }
+}
+
+/* ---------------- файлы ---------------- */
+function download(name, blob) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500); }
+function saveJson() { const o = {app: 'cubica-room-editor', v: 1, shapes: S.shapes, ul: S.ul}; download('plan_' + new Date().toISOString().slice(0, 10) + '.json', new Blob([JSON.stringify(o)], {type: 'application/json'})); }
+$('bSave').onclick = saveJson;
+$('bOpen').onclick = () => $('fJson').click();
+$('fJson').onchange = async e => { const f = e.target.files[0]; e.target.value = ''; if (!f) return; try { const o = JSON.parse(await f.text()); if (!Array.isArray(o.shapes)) throw new Error('это не план'); S.shapes = o.shapes; S.ul = o.ul || null; procCache = null; S.sel = null; commit(); ulPanel(); panel(); fitAll(); toast('План открыт'); } catch (err) { toast('Не удалось открыть: ' + err.message, true); } };
+let newArm = 0;
+$('bNew').onclick = () => { if (S.shapes.length && Date.now() - newArm > 3000) { newArm = Date.now(); toast('Нажмите «Новый» ещё раз, чтобы очистить план'); return; } newArm = 0; S.shapes = []; S.ul = null; procCache = null; S.sel = null; S.draw = null; commit(); ulPanel(); panel(); fitAll(); };
+$('bPng').onclick = async () => {
+  const was = {sel: S.sel, selV: S.selV, hover: S.hover, view: {...S.view}};
+  S.sel = null; S.hover = null; S.selV = -1; fitAll(60);
+  const {w, h} = stageSize(); const k = 2;
+  const xml = new XMLSerializer().serializeToString(svg).replace('<svg', '<svg width="' + w + '" height="' + h + '"');
+  const img = new Image(); img.onload = () => { const c = document.createElement('canvas'); c.width = w * k; c.height = h * k; const g = c.getContext('2d'); g.scale(k, k); g.drawImage(img, 0, 0); c.toBlob(b => download('plan.png', b)); S.sel = was.sel; S.view = was.view; render(); };
+  img.onerror = () => { toast('Не удалось сделать картинку', true); S.sel = was.sel; S.view = was.view; render(); };
+  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(xml);
+};
+$('bUndo').onclick = undo; $('bRedo').onclick = redo; $('bFit').onclick = () => fitAll();
+$('bUnion').onclick = doUnion; $('bSub').onclick = doSubtract;
+$('bSide').onclick = () => document.body.classList.toggle('side-open');
+
+/* ---------------- связь с калькулятором ---------------- */
+function b64urlDec(s) { s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; const bin = atob(s); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return new TextDecoder().decode(u); }
+const peer = () => window.opener || (window.parent !== window ? window.parent : null);
+function loadInput(o) {
+  if (!o) return false;
+  const rooms = Array.isArray(o.rooms) ? o.rooms : [o];
+  const shapes = [];
+  rooms.forEach((r, k) => {
+    let pts = null;
+    if (r.shape && Array.isArray(r.shape.pts)) pts = r.shape.pts.map(p => ({x: +p.x, y: +p.y, b: +p.b || 0}));
+    else if (Array.isArray(r.polygon) && r.polygon.length >= 3) pts = r.polygon.map(p => ({x: +p[0], y: +p[1], b: 0}));
+    else if (r.L > 0 && r.W > 0) pts = rectPts(0, 0, +r.L, +r.W);
+    if (pts) shapes.push({id: uid(), name: r.name || 'Помещение ' + (k + 1), kind: r.kind || 'room', pts: cleanPts(pts), hidden: false});
+  });
+  if (o.calc) S.calc = o.calc;
+  if (shapes.length) { S.shapes = shapes; S.sel = shapes[0].id; }
+  return true;
+}
+function roomOut(sh) {
+  const poly = flatten(sh, 2); const bb = bboxOf(poly);
+  const norm = poly.map(p => [Math.round((p[0] - bb.x0) * 10) / 10, Math.round((p[1] - bb.y0) * 10) / 10]);
+  // колонны/вырезы внутри помещения
+  const holes = S.shapes.filter(s => s.kind === 'cut' && !s.hidden && s !== sh).map(s => flatten(s, 2)).filter(h => h.every(p => pip(poly, p[0], p[1]))).map(h => h.map(p => [Math.round((p[0] - bb.x0) * 10) / 10, Math.round((p[1] - bb.y0) * 10) / 10]));
+  const holeArea = holes.reduce((s, h) => s + Math.abs(signedArea(h)), 0);
+  return {
+    name: sh.name, kind: sh.kind, polygon: norm, L: Math.round(bb.w), W: Math.round(bb.h),
+    area_m2: Math.round((shArea(sh) - holeArea) / 1e4) / 100, perimeter_mm: Math.round(perimeter(sh)), holes,
+    isRect: sh.pts.length === 4 && !sh.pts.some(p => p.b) && [0, 1, 2, 3].every(i => Math.abs(interiorAngle(sh, i) - 90) < 0.05),
+    shape: {pts: sh.pts.map(p => ({x: R2(p.x - bb.x0), y: R2(p.y - bb.y0), b: p.b || 0}))}
+  };
+}
+function sendApply(all) {
+  const rooms = S.shapes.filter(s => s.kind !== 'cut' && !s.hidden);
+  let sh = cur(); if (!sh || sh.kind === 'cut') sh = rooms.length === 1 ? rooms[0] : null;
+  if (!sh && !all) { toast('Выберите помещение, которое передать в калькулятор', true); return; }
+  if (sh && selfIntersects(flatten(sh, 2))) { toast('Стены пересекаются — исправьте контур перед передачей', true); return; }
+  const msg = {source: 'cubica-room-editor', type: 'apply', v: 1, room: sh ? roomOut(sh) : roomOut(rooms[0]), rooms: rooms.map(roomOut)};
+  if (all) msg.all = true;
+  const p = peer(); if (!p) { toast('Редактор открыт не из калькулятора', true); return; }
+  p.postMessage(msg, '*');
+  toast('Передано в калькулятор');
+  if (window.opener) setTimeout(() => window.close(), 250);
+}
+$('bApply').onclick = () => sendApply(false);
+$('bApplyAll').onclick = () => sendApply(true);
+$('bCancel').onclick = () => { const p = peer(); if (p) p.postMessage({source: 'cubica-room-editor', type: 'cancel'}, '*'); if (window.opener) window.close(); };
+window.addEventListener('message', e => {
+  const d = e.data; if (!d || d.target !== 'cubica-room-editor') return;
+  if (d.type === 'load') { S.embed = true; document.body.classList.add('embed'); loadInput(d); hist = []; hpos = -1; commit(); render(); panel(); fitAll(); }
+});
+
+/* ---------------- старт ---------------- */
+function init() {
+  let inp = null;
+  const m = location.hash.match(/in=([^&]+)/);
+  if (m) { try { inp = JSON.parse(b64urlDec(m[1])); } catch (e) { console.warn('bad #in', e); } }
+  S.embed = !!(peer() || inp || /embed=1/.test(location.search + location.hash));
+  if (S.embed) document.body.classList.add('embed');
+  let restored = false;
+  if (inp) restored = loadInput(inp);
+  if (!restored && !S.embed) {
+    try { const o = JSON.parse(localStorage.getItem(LS_KEY) || 'null'); if (o && Array.isArray(o.shapes)) { S.shapes = o.shapes; if (o.opt) Object.assign(S.opt, o.opt); if (o.ul) S.ul = o.ul; if (o.view) S.view = o.view; restored = 'view'; } } catch (e) {}
+  }
+  // id не должны совпасть с новыми
+  nextId = S.shapes.length + 10;
+  syncStatus(); ulPanel(); commit(); updUndo(); panel(); setTool('select');
+  if (restored === 'view' && S.view && S.view.s) render(); else fitAll();
+  if (peer()) peer().postMessage({source: 'cubica-room-editor', type: 'ready'}, '*');
+}
+window.addEventListener('resize', () => render());
+init();
+</script>
+</body>
+</html>
